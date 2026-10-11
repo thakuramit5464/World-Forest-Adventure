@@ -30,6 +30,9 @@ namespace Greenhaven.Editor
         // (the 180° the Generic rig needed would now face the character backwards).
         const float CharacterYawOffset = 0f;
 
+        /// <summary>The humanoid clip library (needed by any humanoid character, including the generated hero).</summary>
+        public static bool AnimationLibraryAvailable => AssetDatabase.LoadAssetAtPath<GameObject>(LibraryPath) != null;
+
         public static bool CharacterAvailable =>
             AssetDatabase.LoadAssetAtPath<GameObject>(CharacterModelPath) != null &&
             AssetDatabase.LoadAssetAtPath<GameObject>(LibraryPath) != null;
@@ -273,11 +276,23 @@ namespace Greenhaven.Editor
             return t;
         }
 
+        /// <summary>
+        /// Returns an empty controller at the given name. An existing asset is cleared and reused
+        /// (same GUID), so scenes built earlier keep a valid reference when another builder runs.
+        /// </summary>
         static AnimatorController NewController(string name)
         {
             string path = $"{ControllerFolder}/{name}.controller";
-            AssetDatabase.DeleteAsset(path);
-            return AnimatorController.CreateAnimatorControllerAtPath(path);
+            var existing = AssetDatabase.LoadAssetAtPath<AnimatorController>(path);
+            if (existing == null) return AnimatorController.CreateAnimatorControllerAtPath(path);
+
+            foreach (Object sub in AssetDatabase.LoadAllAssetsAtPath(path))
+                if (sub != null && sub != existing) Object.DestroyImmediate(sub, true);
+            existing.layers = new AnimatorControllerLayer[0];
+            existing.parameters = new AnimatorControllerParameter[0];
+            existing.AddLayer("Base Layer");
+            EditorUtility.SetDirty(existing);
+            return existing;
         }
 
         /// <summary>

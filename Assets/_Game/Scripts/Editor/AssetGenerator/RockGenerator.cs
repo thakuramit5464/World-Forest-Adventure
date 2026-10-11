@@ -15,6 +15,9 @@ namespace Greenhaven.Editor.AssetGenerator
         public AssetCategory Category => AssetCategory.Rock;
         public string Prefix => "Rock";
         public string DisplayName => "Rocks";
+        public string Group => "Nature";
+        public int DefaultCount => 6;
+        public Palette Palette => GenPalette.Nature;
         public string StyleName(int variant) => Styles[variant % Styles.Length];
 
         public GeneratedMesh Build(GeneratorSettings s, int variant, string meshName)

@@ -14,6 +14,9 @@ namespace Greenhaven.Editor.AssetGenerator
         public AssetCategory Category => AssetCategory.PineTree;
         public string Prefix => "Pine";
         public string DisplayName => "Pine Trees";
+        public string Group => "Nature";
+        public int DefaultCount => 3;
+        public Palette Palette => GenPalette.Nature;
         public string StyleName(int variant) => Styles[variant % Styles.Length];
 
         public GeneratedMesh Build(GeneratorSettings s, int variant, string meshName)

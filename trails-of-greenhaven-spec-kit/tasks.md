@@ -101,5 +101,16 @@ Legend: `[x]` done and verified · `[~]` implemented and compiles, Play-mode/dev
 
 ## Tools — Procedural asset generator
 - [~] Stage 1: pine, broadleaf and rock generators, asset saving (meshes, shared palette material, prefabs), editor window, preview scene, validation and EditMode tests. Compiles cleanly (verified 15:19); generation in the Editor and the tests not yet run.
-- [ ] Stage 2: bushes and flowers (palette rows reserved).
+- [~] Stage 2: bushes and flowers (Round/Wide/Flowering bushes; Single/Cluster/Tall flowers).
+
+## Phase 2 — Hero, village assets and village world
+- [~] Procedural hero: skinned mesh, Humanoid avatar, prefab; driven by the existing Player.controller. Needs an in-Editor look and animation check.
+- [~] Integrate the hero with the existing player (the Player builders prefer the hero; the controller and camera are unchanged).
+- [~] Building generator: cottage, family house, shop/workshop (3 + 2 + 1 default variants).
+- [~] Prop generator: well, bridge, fence, gate, bench, lantern, signpost, barrel, crate, planter.
+- [~] `GreenhavenVillage` scene: square, well, 6 buildings, door paths, gardens, stream and bridge, north exit, boundaries, vegetation.
+- [~] Menus: Generate Hero, Generate Village Assets, Create Village Scene, Validate Generated Assets.
+- [ ] Owner play-test of the village (movement, camera, collisions, readable signs).
+- [ ] Move Mira, Rowan and the quests into the village layout (currently only in `GreenhavenRegion`).
+- [ ] Device profiling of the village scene.
 - [ ] Decide whether generated assets replace or complement the Quaternius props in `GreenhavenRegion` (needs owner approval before changing the main scene).

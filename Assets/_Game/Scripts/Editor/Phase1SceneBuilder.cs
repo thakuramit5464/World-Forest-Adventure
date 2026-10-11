@@ -3,6 +3,7 @@ using System.IO;
 using Greenhaven.CameraRig;
 using Greenhaven.Collectibles;
 using Greenhaven.Core;
+using Greenhaven.Editor.AssetGenerator;
 using Greenhaven.Interaction;
 using Greenhaven.Player;
 using Greenhaven.Quests;
@@ -87,7 +88,7 @@ namespace Greenhaven.Editor
             BuildBackdrop(env);
             BuildBoundaries(env);
 
-            GameObject player = BuildPlayer();
+            GameObject player = BuildPlayer(SpawnPoint);
             BuildCamera(player);
             CollectibleRegistry registry = new GameObject("CollectibleRegistry").AddComponent<CollectibleRegistry>();
             QuestManager quests = BuildQuests(registry, out QuestDefinition supplies, out QuestDefinition request);
@@ -106,7 +107,7 @@ namespace Greenhaven.Editor
 
         // ───────────────────────────── Materials ─────────────────────────────
 
-        static void CreateMaterials()
+        internal static void CreateMaterials()
         {
             materials = new Dictionary<string, Material>();
             Shader shader = Shader.Find("Universal Render Pipeline/Simple Lit") ?? Shader.Find("Universal Render Pipeline/Lit");
@@ -168,7 +169,7 @@ namespace Greenhaven.Editor
 
         // ───────────────────────────── Lighting ─────────────────────────────
 
-        static void BuildLighting()
+        internal static void BuildLighting()
         {
             var sun = new GameObject("Sun");
             Light light = sun.AddComponent<Light>();
@@ -506,10 +507,15 @@ namespace Greenhaven.Editor
 
         // ───────────────────────────── Characters ─────────────────────────────
 
-        static GameObject BuildPlayer()
+        /// <summary>
+        /// Player with CharacterController + gameplay components. Visual preference: the generated hero
+        /// (Greenhaven ▸ Generate Hero), then the Kenney character, then a primitive placeholder.
+        /// Requires <see cref="CreateMaterials"/> to have run (for the placeholder).
+        /// </summary>
+        internal static GameObject BuildPlayer(Vector3 spawn)
         {
             var player = new GameObject("Player");
-            player.transform.SetPositionAndRotation(SpawnPoint, Quaternion.identity);
+            player.transform.SetPositionAndRotation(spawn, Quaternion.identity);
 
             CharacterController cc = player.AddComponent<CharacterController>();
             cc.height = 1.8f;
@@ -524,6 +530,19 @@ namespace Greenhaven.Editor
             player.AddComponent<PlayerInteractor>();
 
             Transform visual = Group("Visual", player.transform);
+            GameObject hero = HeroGenerator.FindPrefab(GeneratorPrefs.Settings.Seed);
+            if (hero != null && GreenhavenArt.AnimationLibraryAvailable)
+            {
+                var heroMotor = new SerializedObject(player.GetComponent<PlayerMotor>());
+                var instance = (GameObject)PrefabUtility.InstantiatePrefab(hero, visual);
+                Animator heroAnimator = instance.GetComponent<Animator>();
+                heroAnimator.runtimeAnimatorController = GreenhavenArt.PlayerController(
+                    heroMotor.FindProperty("walkSpeed").floatValue, heroMotor.FindProperty("runSpeed").floatValue);
+                heroAnimator.applyRootMotion = false;
+                player.AddComponent<PlayerAnimator>();
+                SetLayerRecursively(player, IgnoreRaycastLayer);
+                return SaveAndConnectPrefab(player, "Player");
+            }
             if (GreenhavenArt.CharacterAvailable)
             {
                 var motorSo = new SerializedObject(player.GetComponent<PlayerMotor>());
@@ -791,7 +810,7 @@ namespace Greenhaven.Editor
             so.ApplyModifiedPropertiesWithoutUndo();
         }
 
-        static void BuildCamera(GameObject player)
+        internal static void BuildCamera(GameObject player)
         {
             var camGo = new GameObject("Main Camera") { tag = "MainCamera" };
             Camera cam = camGo.AddComponent<Camera>();
@@ -810,7 +829,7 @@ namespace Greenhaven.Editor
 
         // ───────────────────────────── HUD ─────────────────────────────
 
-        static DialogueView BuildHud(GameObject player, QuestManager quests)
+        internal static DialogueView BuildHud(GameObject player, QuestManager quests)
         {
             PlayerInputReader input = player.GetComponent<PlayerInputReader>();
             PlayerInteractor interactor = player.GetComponent<PlayerInteractor>();
@@ -996,7 +1015,7 @@ namespace Greenhaven.Editor
         /// Our scene components must reference scene objects, never prefab/model assets
         /// (an asset's components never run). Returns the number of offending fields.
         /// </summary>
-        static int ValidateSceneReferences(Scene scene)
+        internal static int ValidateSceneReferences(Scene scene)
         {
             int bad = 0;
             foreach (GameObject root in scene.GetRootGameObjects())
@@ -1090,7 +1109,7 @@ namespace Greenhaven.Editor
             return go;
         }
 
-        static void SetRef(Object target, string property, Object value)
+        internal static void SetRef(Object target, string property, Object value)
         {
             var so = new SerializedObject(target);
             SerializedProperty prop = so.FindProperty(property);
@@ -1114,7 +1133,7 @@ namespace Greenhaven.Editor
             so.ApplyModifiedPropertiesWithoutUndo();
         }
 
-        static void SetStrings(SerializedProperty array, params string[] values)
+        internal static void SetStrings(SerializedProperty array, params string[] values)
         {
             array.arraySize = values.Length;
             for (int i = 0; i < values.Length; i++) array.GetArrayElementAtIndex(i).stringValue = values[i];

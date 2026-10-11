@@ -1,62 +1,109 @@
 using System.Collections.Generic;
+using System.Linq;
+using Greenhaven.Editor.VillageScene;
 using UnityEditor;
 using UnityEngine;
 
 namespace Greenhaven.Editor.AssetGenerator
 {
+    /// <summary>Per-user generator settings shared by the window and the Greenhaven menu commands.</summary>
+    public static class GeneratorPrefs
+    {
+        const string Key = "Greenhaven.AssetGenerator.";
+
+        public static GeneratorSettings Settings
+        {
+            get
+            {
+                GeneratorSettings d = GeneratorSettings.Default;
+                return new GeneratorSettings
+                {
+                    Seed = EditorPrefs.GetInt(Key + "Seed", d.Seed),
+                    Size = EditorPrefs.GetFloat(Key + "Size", d.Size),
+                    ColorVariation = EditorPrefs.GetFloat(Key + "ColorVariation", d.ColorVariation),
+                };
+            }
+            set
+            {
+                EditorPrefs.SetInt(Key + "Seed", value.Seed);
+                EditorPrefs.SetFloat(Key + "Size", value.Size);
+                EditorPrefs.SetFloat(Key + "ColorVariation", value.ColorVariation);
+            }
+        }
+
+        public static float TreeDensity
+        {
+            get => EditorPrefs.GetFloat(Key + "TreeDensity", 1f);
+            set => EditorPrefs.SetFloat(Key + "TreeDensity", value);
+        }
+
+        public static bool GetEnabled(IAssetGenerator g) => EditorPrefs.GetBool(Key + "Enabled." + g.Prefix, true);
+        public static void SetEnabled(IAssetGenerator g, bool on) => EditorPrefs.SetBool(Key + "Enabled." + g.Prefix, on);
+        public static int GetCount(IAssetGenerator g) => EditorPrefs.GetInt(Key + "Count." + g.Prefix, g.DefaultCount);
+        public static void SetCount(IAssetGenerator g, int count) => EditorPrefs.SetInt(Key + "Count." + g.Prefix, count);
+    }
+
     /// <summary>
-    /// Greenhaven ▸ Generate Assets. Nothing runs automatically: assets are only created or
-    /// replaced when a Generate button is pressed (and replacing asks for confirmation).
+    /// Greenhaven ▸ Generate Assets. Nothing runs automatically: assets are only created or replaced
+    /// when a button or menu command is used, and replacing always asks first.
     /// </summary>
     public sealed class AssetGeneratorWindow : EditorWindow
     {
-        const string PrefsKey = "Greenhaven.AssetGenerator.";
-        static readonly int[] StarterPackCounts = { 3, 3, 6 }; // pine, broadleaf, rock
-
-        GeneratorSettings settings = GeneratorSettings.Default;
-        readonly bool[] enabled = { true, true, true };
-        readonly int[] counts = { 3, 3, 5 };
+        GeneratorSettings settings;
+        float treeDensity;
         string report = "Choose categories and press Generate.";
         Vector2 scroll;
+        Vector2 reportScroll;
 
         [MenuItem("Greenhaven/Generate Assets", priority = 20)]
         static void Open()
         {
             var window = GetWindow<AssetGeneratorWindow>("Greenhaven Assets");
-            window.minSize = new Vector2(360f, 520f);
+            window.minSize = new Vector2(380f, 600f);
         }
+
+        [MenuItem("Greenhaven/Generate Hero", priority = 21)]
+        static void GenerateHeroMenu() => Report("Generate Hero", HeroGenerator.Generate(GeneratorPrefs.Settings.Seed));
+
+        [MenuItem("Greenhaven/Generate Village Assets", priority = 22)]
+        static void GenerateVillageMenu() => Report("Generate Village Assets", GenerateDefaults(GeneratorPrefs.Settings));
+
+        [MenuItem("Greenhaven/Create Village Scene", priority = 40)]
+        static void CreateVillageMenu() => Report("Create Village Scene", VillageSceneBuilder.Build(GeneratorPrefs.Settings, GeneratorPrefs.TreeDensity));
+
+        [MenuItem("Greenhaven/Validate Generated Assets", priority = 60)]
+        static void ValidateMenu() => Report("Validate Generated Assets", GeneratedAssetStore.ValidateAll());
+
+        static void Report(string title, string text)
+        {
+            Debug.Log($"Greenhaven — {title}:\n{text}");
+            string shown = text.Length > 1200 ? text.Substring(0, 1200) + "\n…(full report in the Console)" : text;
+            EditorUtility.DisplayDialog(title, shown, "OK");
+        }
+
+        /// <summary>Every category at its default count: the full village starter set.</summary>
+        public static string GenerateDefaults(GeneratorSettings s) =>
+            GeneratedAssetStore.Generate(Generators.All.Select(g => new GeneratedAssetStore.Request { Generator = g, Count = g.DefaultCount }).ToList(), s);
 
         void OnEnable()
         {
-            settings.Seed = EditorPrefs.GetInt(PrefsKey + "Seed", settings.Seed);
-            settings.Size = EditorPrefs.GetFloat(PrefsKey + "Size", settings.Size);
-            settings.ColorVariation = EditorPrefs.GetFloat(PrefsKey + "ColorVariation", settings.ColorVariation);
-            for (int i = 0; i < Generators.All.Length; i++)
-            {
-                enabled[i] = EditorPrefs.GetBool(PrefsKey + "Enabled" + i, enabled[i]);
-                counts[i] = EditorPrefs.GetInt(PrefsKey + "Count" + i, counts[i]);
-            }
+            settings = GeneratorPrefs.Settings;
+            treeDensity = GeneratorPrefs.TreeDensity;
         }
 
         void OnDisable()
         {
-            EditorPrefs.SetInt(PrefsKey + "Seed", settings.Seed);
-            EditorPrefs.SetFloat(PrefsKey + "Size", settings.Size);
-            EditorPrefs.SetFloat(PrefsKey + "ColorVariation", settings.ColorVariation);
-            for (int i = 0; i < Generators.All.Length; i++)
-            {
-                EditorPrefs.SetBool(PrefsKey + "Enabled" + i, enabled[i]);
-                EditorPrefs.SetInt(PrefsKey + "Count" + i, counts[i]);
-            }
+            GeneratorPrefs.Settings = settings;
+            GeneratorPrefs.TreeDensity = treeDensity;
         }
 
         void OnGUI()
         {
+            scroll = EditorGUILayout.BeginScrollView(scroll);
             EditorGUILayout.LabelField("Procedural Asset Generator", EditorStyles.boldLabel);
-            EditorGUILayout.HelpBox($"Saves meshes, one shared palette material and prefabs to {GeneratedAssetStore.Root}. " +
+            EditorGUILayout.HelpBox($"Saves meshes, shared palette materials and prefabs to {GeneratedAssetStore.Root}. " +
                                     "The same seed and settings always produce the same assets.", MessageType.None);
 
-            EditorGUILayout.Space();
             EditorGUILayout.LabelField("Settings", EditorStyles.boldLabel);
             using (new EditorGUILayout.HorizontalScope())
             {
@@ -66,27 +113,44 @@ namespace Greenhaven.Editor.AssetGenerator
             settings.Size = EditorGUILayout.Slider(new GUIContent("Size", "Overall scale multiplier."), settings.Size, 0.5f, 2f);
             settings.ColorVariation = EditorGUILayout.Slider(new GUIContent("Color Variation", "Per-asset and per-face colour spread."), settings.ColorVariation, 0f, 1f);
 
-            EditorGUILayout.Space();
-            EditorGUILayout.LabelField("Categories (variations)", EditorStyles.boldLabel);
-            for (int i = 0; i < Generators.All.Length; i++)
+            foreach (IGrouping<string, IAssetGenerator> group in Generators.All.GroupBy(g => g.Group))
             {
-                IAssetGenerator gen = Generators.All[i];
-                using (new EditorGUILayout.HorizontalScope())
+                EditorGUILayout.Space();
+                EditorGUILayout.LabelField(group.Key + " (variations)", EditorStyles.boldLabel);
+                foreach (IAssetGenerator gen in group)
                 {
-                    enabled[i] = EditorGUILayout.ToggleLeft(gen.DisplayName, enabled[i], GUILayout.Width(140f));
-                    using (new EditorGUI.DisabledScope(!enabled[i]))
-                        counts[i] = EditorGUILayout.IntSlider(counts[i], 1, 12);
+                    using (new EditorGUILayout.HorizontalScope())
+                    {
+                        bool on = EditorGUILayout.ToggleLeft(gen.DisplayName, GeneratorPrefs.GetEnabled(gen), GUILayout.Width(160f));
+                        GeneratorPrefs.SetEnabled(gen, on);
+                        using (new EditorGUI.DisabledScope(!on))
+                            GeneratorPrefs.SetCount(gen, EditorGUILayout.IntSlider(GeneratorPrefs.GetCount(gen), 1, 12));
+                    }
                 }
             }
-            using (new EditorGUI.DisabledScope(true))
-                EditorGUILayout.ToggleLeft("Bushes & Flowers (stage 2)", false);
 
             EditorGUILayout.Space();
             using (new EditorGUILayout.HorizontalScope())
             {
-                if (GUILayout.Button("Generate Selected", GUILayout.Height(30f))) Run(selectedOnly: true);
-                if (GUILayout.Button(new GUIContent("Generate Starter Pack", "All categories: 3 pines, 3 broadleaf, 6 rocks."), GUILayout.Height(30f))) Run(selectedOnly: false);
+                if (GUILayout.Button("Generate Selected", GUILayout.Height(30f))) report = GenerateSelected();
+                if (GUILayout.Button(new GUIContent("Generate All (defaults)", "Every category at its default count."), GUILayout.Height(30f)))
+                    report = GenerateDefaults(settings);
             }
+
+            EditorGUILayout.Space();
+            EditorGUILayout.LabelField("Hero", EditorStyles.boldLabel);
+            if (GUILayout.Button("Generate Hero (uses Seed)")) report = HeroGenerator.Generate(settings.Seed);
+
+            EditorGUILayout.Space();
+            EditorGUILayout.LabelField("Village scene", EditorStyles.boldLabel);
+            treeDensity = EditorGUILayout.Slider(new GUIContent("Tree Density", "Multiplier for trees, bushes and rocks around the village."), treeDensity, 0.3f, 1.5f);
+            if (GUILayout.Button("Create Village Scene (uses Seed)"))
+            {
+                GeneratorPrefs.Settings = settings;
+                report = VillageSceneBuilder.Build(settings, treeDensity);
+            }
+
+            EditorGUILayout.Space();
             using (new EditorGUILayout.HorizontalScope())
             {
                 if (GUILayout.Button("Build Preview Scene")) report = PreviewSceneBuilder.Build();
@@ -96,25 +160,21 @@ namespace Greenhaven.Editor.AssetGenerator
 
             EditorGUILayout.Space();
             EditorGUILayout.LabelField("Last result", EditorStyles.boldLabel);
-            scroll = EditorGUILayout.BeginScrollView(scroll);
+            reportScroll = EditorGUILayout.BeginScrollView(reportScroll, GUILayout.MinHeight(120f));
             EditorGUILayout.HelpBox(report, MessageType.None);
+            EditorGUILayout.EndScrollView();
             EditorGUILayout.EndScrollView();
         }
 
-        void Run(bool selectedOnly)
+        string GenerateSelected()
         {
             var requests = new List<GeneratedAssetStore.Request>();
-            for (int i = 0; i < Generators.All.Length; i++)
-            {
-                if (selectedOnly && !enabled[i]) continue;
-                requests.Add(new GeneratedAssetStore.Request
-                {
-                    Generator = Generators.All[i],
-                    Count = selectedOnly ? counts[i] : StarterPackCounts[i],
-                });
-            }
-            report = GeneratedAssetStore.Generate(requests, settings);
-            Debug.Log("Greenhaven generator: " + report);
+            foreach (IAssetGenerator gen in Generators.All)
+                if (GeneratorPrefs.GetEnabled(gen))
+                    requests.Add(new GeneratedAssetStore.Request { Generator = gen, Count = GeneratorPrefs.GetCount(gen) });
+            string result = GeneratedAssetStore.Generate(requests, settings);
+            Debug.Log("Greenhaven generator: " + result);
+            return result;
         }
 
         static void ShowInProject()
