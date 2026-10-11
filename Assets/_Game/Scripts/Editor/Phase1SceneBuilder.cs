@@ -430,8 +430,15 @@ namespace Greenhaven.Editor
             player.AddComponent<PlayerMotor>();
             player.AddComponent<PlayerInteractor>();
 
-            // Placeholder adventurer: readable silhouette with a backpack so facing is obvious.
             Transform visual = Group("Visual", player.transform);
+            if (TryBuildAnimatedAdventurer(visual))
+            {
+                player.AddComponent<PlayerAnimator>();
+                SetLayerRecursively(player, IgnoreRaycastLayer);
+                return SaveAndConnectPrefab(player, "Player");
+            }
+
+            // Fallback placeholder adventurer: readable silhouette with a backpack so facing is obvious.
             LocalPrim(PrimitiveType.Capsule, "Body", visual, new Vector3(0f, 0.75f, 0f), new Vector3(0.62f, 0.55f, 0.55f), "Tunic", collider: false);
             LocalPrim(PrimitiveType.Sphere, "Head", visual, new Vector3(0f, 1.52f, 0f), Vector3.one * 0.5f, "Skin", collider: false);
             LocalPrim(PrimitiveType.Sphere, "Hair", visual, new Vector3(0f, 1.63f, -0.05f), new Vector3(0.53f, 0.36f, 0.53f), "Timber", collider: false);
@@ -442,6 +449,141 @@ namespace Greenhaven.Editor
 
             SetLayerRecursively(player, IgnoreRaycastLayer);
             return SaveAndConnectPrefab(player, "Player");
+        }
+
+        const string AdventurerFolder = AdventurerImportSettings.Folder;
+        const string AdventurerModelPath = AdventurerFolder + "characterMedium.fbx";
+        const string AdventurerSkinPath = AdventurerFolder + "Textures/adventurerSkin.png";
+        const string AdventurerControllerPath = AdventurerFolder + "Adventurer.controller";
+        const float AdventurerHeight = 1.75f;
+        // Rotate the model if it does not face +Z after import (check in Play mode).
+        const float AdventurerYawOffset = 0f;
+
+        /// <summary>Instantiates the rigged Kenney adventurer under <paramref name="visual"/>. False if the asset is missing.</summary>
+        static bool TryBuildAnimatedAdventurer(Transform visual)
+        {
+            if (AssetDatabase.LoadAssetAtPath<GameObject>(AdventurerModelPath) == null)
+            {
+                Debug.LogWarning($"Greenhaven: {AdventurerModelPath} not found; using the primitive placeholder adventurer.");
+                return false;
+            }
+
+            // Make sure the import rules in AdventurerImportSettings have been applied.
+            foreach (string guid in AssetDatabase.FindAssets("t:Model", new[] { AdventurerFolder.TrimEnd('/') }))
+                AssetDatabase.ImportAsset(AssetDatabase.GUIDToAssetPath(guid), ImportAssetOptions.ForceUpdate);
+
+            var modelAsset = AssetDatabase.LoadAssetAtPath<GameObject>(AdventurerModelPath);
+            var model = (GameObject)PrefabUtility.InstantiatePrefab(modelAsset, visual);
+            model.name = "AdventurerModel";
+            model.transform.localRotation = Quaternion.Euler(0f, AdventurerYawOffset, 0f);
+
+            // Fit to the CharacterController: scale to target height and stand on y = 0.
+            Renderer[] renderers = model.GetComponentsInChildren<Renderer>();
+            if (renderers.Length > 0)
+            {
+                Bounds b = renderers[0].bounds;
+                for (int i = 1; i < renderers.Length; i++) b.Encapsulate(renderers[i].bounds);
+                if (b.size.y > 0.001f)
+                {
+                    float scale = AdventurerHeight / b.size.y;
+                    model.transform.localScale = Vector3.one * scale;
+                    model.transform.localPosition = new Vector3(0f, -(b.min.y - visual.position.y) * scale, 0f);
+                }
+            }
+
+            Material skin = AdventurerMaterial();
+            foreach (Renderer r in renderers)
+            {
+                var mats = new Material[r.sharedMaterials.Length];
+                for (int i = 0; i < mats.Length; i++) mats[i] = skin;
+                r.sharedMaterials = mats;
+                r.shadowCastingMode = ShadowCastingMode.On;
+            }
+
+            // Explicit null check: Unity's fake-null objects defeat the ?? operator.
+            Animator animator = model.GetComponent<Animator>();
+            if (animator == null) animator = model.AddComponent<Animator>();
+            animator.runtimeAnimatorController = BuildAdventurerController();
+            animator.applyRootMotion = false;
+            animator.cullingMode = AnimatorCullingMode.CullUpdateTransforms;
+            return true;
+        }
+
+        static Material AdventurerMaterial()
+        {
+            const string path = MaterialFolder + "/M_Adventurer.mat";
+            Material mat = AssetDatabase.LoadAssetAtPath<Material>(path);
+            if (mat == null)
+            {
+                Shader shader = Shader.Find("Universal Render Pipeline/Simple Lit") ?? Shader.Find("Universal Render Pipeline/Lit");
+                mat = new Material(shader);
+                AssetDatabase.CreateAsset(mat, path);
+            }
+            var tex = AssetDatabase.LoadAssetAtPath<Texture2D>(AdventurerSkinPath);
+            mat.SetTexture("_BaseMap", tex);
+            mat.mainTexture = tex;
+            mat.SetColor("_BaseColor", Color.white);
+            if (mat.HasProperty("_Smoothness")) mat.SetFloat("_Smoothness", 0.08f);
+            if (mat.HasProperty("_SpecularHighlights")) mat.SetFloat("_SpecularHighlights", 0f);
+            EditorUtility.SetDirty(mat);
+            return mat;
+        }
+
+        static RuntimeAnimatorController BuildAdventurerController()
+        {
+            AnimationClip idle = LoadClip("idle"), run = LoadClip("run"), jump = LoadClip("jump");
+
+            AssetDatabase.DeleteAsset(AdventurerControllerPath);
+            var controller = UnityEditor.Animations.AnimatorController.CreateAnimatorControllerAtPath(AdventurerControllerPath);
+            controller.AddParameter("MoveSpeed", AnimatorControllerParameterType.Float);
+            controller.AddParameter("Grounded", AnimatorControllerParameterType.Bool);
+            controller.AddParameter("RunPlaybackSpeed", AnimatorControllerParameterType.Float);
+            // The getter returns a copy: edit it, then assign it back. Grounded starts true, playback at 1.
+            AnimatorControllerParameter[] parameters = controller.parameters;
+            foreach (AnimatorControllerParameter p in parameters)
+            {
+                if (p.name == "Grounded") p.defaultBool = true;
+                if (p.name == "RunPlaybackSpeed") p.defaultFloat = 1f;
+            }
+            controller.parameters = parameters;
+
+            var sm = controller.layers[0].stateMachine;
+            var idleState = sm.AddState("Idle");
+            idleState.motion = idle;
+            var runState = sm.AddState("Run");
+            runState.motion = run;
+            runState.speedParameter = "RunPlaybackSpeed";
+            runState.speedParameterActive = true;
+            var jumpState = sm.AddState("Jump");
+            jumpState.motion = jump;
+            sm.defaultState = idleState;
+
+            UnityEditor.Animations.AnimatorStateTransition T(UnityEditor.Animations.AnimatorState from, UnityEditor.Animations.AnimatorState to, float duration)
+            {
+                var t = from.AddTransition(to);
+                t.hasExitTime = false;
+                t.duration = duration;
+                return t;
+            }
+            T(idleState, runState, 0.12f).AddCondition(UnityEditor.Animations.AnimatorConditionMode.Greater, 0.2f, "MoveSpeed");
+            T(runState, idleState, 0.15f).AddCondition(UnityEditor.Animations.AnimatorConditionMode.Less, 0.15f, "MoveSpeed");
+            T(idleState, jumpState, 0.08f).AddCondition(UnityEditor.Animations.AnimatorConditionMode.IfNot, 0f, "Grounded");
+            T(runState, jumpState, 0.08f).AddCondition(UnityEditor.Animations.AnimatorConditionMode.IfNot, 0f, "Grounded");
+            T(jumpState, idleState, 0.1f).AddCondition(UnityEditor.Animations.AnimatorConditionMode.If, 0f, "Grounded");
+
+            if (idle == null || run == null || jump == null)
+                Debug.LogWarning("Greenhaven: one or more adventurer clips (Idle/Run/Jump) were not found; check the FBX import.");
+            AssetDatabase.SaveAssets();
+            return controller;
+        }
+
+        static AnimationClip LoadClip(string fileName)
+        {
+            foreach (Object o in AssetDatabase.LoadAllAssetsAtPath($"{AdventurerFolder}Animations/{fileName}.fbx"))
+            {
+                if (o is AnimationClip clip && !clip.name.StartsWith("__preview__")) return clip;
+            }
+            return null;
         }
 
         static void BuildNpc(DialogueView dialogue)
