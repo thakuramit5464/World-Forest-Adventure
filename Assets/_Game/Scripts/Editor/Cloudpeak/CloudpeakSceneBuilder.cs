@@ -45,6 +45,7 @@ namespace Greenhaven.Editor.Cloudpeak
         static readonly List<(Vector2 p, float r)> reserved = new List<(Vector2, float)>();
         static readonly List<GameObject> walkable = new List<GameObject>();
         static Vector3 summitMarker;
+        static Greenhaven.Environment.RiverFlowController brook;
 
         // ───────────────────────────── Entry point ─────────────────────────────
 
@@ -107,6 +108,7 @@ namespace Greenhaven.Editor.Cloudpeak
             // 6. Mountain rock formations, then vegetation by zone.
             BuildMountainDetails(mountain);
             BuildVegetation(vegetation);
+            if (brook != null) log.AppendLine("Brook: " + River.RiverTools.AddBankDetails(brook, assets));
 
             // Wildlife (if generated): deer in the glade, rabbits and foxes in the forest, goats on the ledges, birds on perches.
             if (Wildlife.WildlifeGenerator.Kinds.Any(k => Wildlife.WildlifeGenerator.VariantsOnDisk(k) > 0))
@@ -287,21 +289,15 @@ namespace Greenhaven.Editor.Cloudpeak
 
         static void BuildBrookAndBridge(Transform parent)
         {
-            var mb = new MeshBuilder();
+            // Flowing brook (Greenhaven/RiverWater) following the bed, west to east.
             float H = world.Settings.HalfSize;
-            const float step = 2f, halfWidth = 1.5f;
-            for (float x = -H; x < H - 0.01f; x += step)
+            var course = new List<Vector3>();
+            for (float x = -H; x <= H + 0.01f; x += 4f)
             {
-                float xb = Mathf.Min(x + step, H);
-                float ya = world.Surface(x, world.BrookZ(x)) + 0.45f, yb = world.Surface(xb, world.BrookZ(xb)) + 0.45f;
-                Vector3 a = new Vector3(x, ya, world.BrookZ(x) - halfWidth), b = new Vector3(x, ya, world.BrookZ(x) + halfWidth);
-                Vector3 c = new Vector3(xb, yb, world.BrookZ(xb) - halfWidth), d = new Vector3(xb, yb, world.BrookZ(xb) + halfWidth);
-                Vector2 uv = VillagePalette.UV(VRamp.Water, 4 + (Mathf.RoundToInt(x / step) % 3 == 0 ? 1 : 0));
-                mb.Triangle(a, b, c, Vector3.up, uv);
-                mb.Triangle(c, b, d, Vector3.up, uv);
+                float cx = Mathf.Clamp(x, -H, H);
+                course.Add(new Vector3(cx, world.Surface(cx, world.BrookZ(cx)) + 0.45f, world.BrookZ(cx)));
             }
-            string name = $"Gen_CloudpeakBrook_s{world.Settings.Seed}";
-            MeshObject("Whispering Brook", parent, GeneratedAssetStore.SaveMesh(mb.ToMesh(name), $"{AssetFolder}/{name}.asset"), village);
+            brook = River.RiverTools.CreateRiver("Whispering Brook (flowing, generated)", $"Cloudpeak_s{world.Settings.Seed}", parent, course, 4f, 0.4f, world.Settings.Seed);
 
             float yaw = Mathf.Atan2(world.BridgeDirection.x, world.BridgeDirection.y) * Mathf.Rad2Deg;
             var deck = new Vector3(world.BridgeCentre.x, world.BridgeDeckHeight - 0.2f + 0.03f, world.BridgeCentre.y); // deck ends meet the banks

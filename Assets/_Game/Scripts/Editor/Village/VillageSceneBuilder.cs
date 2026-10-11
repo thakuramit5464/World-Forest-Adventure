@@ -74,6 +74,7 @@ namespace Greenhaven.Editor.VillageScene
         };
 
         static GeneratorSettings settings;
+        static Greenhaven.Environment.RiverFlowController stream;
         static float seedOffset;
         static StringBuilder log;
         static List<string> missing;
@@ -142,6 +143,9 @@ namespace Greenhaven.Editor.VillageScene
             LeafDrift leaves = AmbientMotionSetup.AddLeafDrift();
             AmbienceController ambience = AmbientMotionSetup.AddAmbience();
             AmbientMotionSetup.AddDebugPanel(Object.FindFirstObjectByType<WindManager>(), leaves, ambience, player, visibleOnStart: false);
+
+            // Pebbles, plants and a few rocks in the stream (kept off paths and the bridge).
+            if (stream != null) log.AppendLine("Stream: " + River.RiverTools.AddBankDetails(stream, settings));
 
             // 8. Validate and save.
             ValidateLayout(layout, doors, player);
@@ -265,19 +269,10 @@ namespace Greenhaven.Editor.VillageScene
             }
             MeshObject("PathsAndSquare", env, paths.ToMesh("Gen_VillagePaths" + suffix), village);
 
-            // Stream surface.
-            var water = new MeshBuilder();
-            const float halfWidth = 1.2f, step = 1.5f;
-            for (float x = -WorldHalf; x < WorldHalf; x += step)
-            {
-                float xb = x + step;
-                Vector3 a = new Vector3(x, -0.18f, StreamZ(x) - halfWidth), b = new Vector3(x, -0.18f, StreamZ(x) + halfWidth);
-                Vector3 c = new Vector3(xb, -0.18f, StreamZ(xb) - halfWidth), d = new Vector3(xb, -0.18f, StreamZ(xb) + halfWidth);
-                Vector2 uv = VillagePalette.UV(VRamp.Water, 4 + (Mathf.RoundToInt(x) % 3 == 0 ? 1 : 0));
-                water.Triangle(a, b, c, Vector3.up, uv);
-                water.Triangle(c, b, d, Vector3.up, uv);
-            }
-            MeshObject("Stream", env, water.ToMesh("Gen_VillageWater" + suffix), village);
+            // Flowing stream (Greenhaven/RiverWater), west to east along the stream bed.
+            var course = new List<Vector3>();
+            for (float x = -WorldHalf; x <= WorldHalf + 0.01f; x += 4f) course.Add(new Vector3(x, -0.18f, StreamZ(x)));
+            stream = River.RiverTools.CreateRiver("Flowing Stream (generated)", "Village" + suffix, env, course, 3.4f, 0.45f, settings.Seed);
         }
 
         static void PathStrip(MeshBuilder mb, System.Random rng, Vector2 a, Vector2 b, float halfWidth)

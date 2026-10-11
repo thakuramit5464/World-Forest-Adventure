@@ -160,3 +160,10 @@ Legend: `[x]` done and verified · `[~]` implemented and compiles, Play-mode/dev
 - [ ] Owner Play Mode check in the Wildlife Demo and Cloudpeak (fox wander and flee, deer graze and react, rabbit hops, goat on rocks, birds perch and fly).
 - [ ] Android profiling with about 20 animals; tune Density and Quality defaults.
 - [ ] Optional CC0 animal calls (record in ASSET_CREDITS.md).
+
+## Rivers
+- [~] RiverWater shader, river mesh generator, RiverFlowController (quality, leaves, splashes, audio hook), editor tools, River Demo scene, builders updated, RiverTests. Written; compile and preview verification pending (Unity had not recompiled at the time of writing).
+- [ ] Owner check in the River Demo: flow direction, slow pool vs fast narrows, bends, foam at rocks, leaves, bridge crossing.
+- [ ] Upgrade water in the existing Village and Cloudpeak scenes (Generate Flowing River, or rebuild them).
+- [ ] Android profiling: Standard vs Low water.
+- [ ] Optional CC0 river ambience clip.

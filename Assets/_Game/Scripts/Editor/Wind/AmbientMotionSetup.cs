@@ -44,16 +44,20 @@ namespace Greenhaven.Editor.WindTools
 
         // ───────────────────────────── Leaves ─────────────────────────────
 
-        public static LeafDrift AddLeafDrift()
+        /// <summary>The shared leaf particle mesh and material (created once).</summary>
+        public static void EnsureLeafAssets(out Mesh leafMesh, out Material material)
         {
             EnsureFolder();
-            var leafMb = new MeshBuilder();
-            leafMb.Triangle(new Vector3(0f, -0.5f, 0f), new Vector3(0.35f, 0f, 0f), new Vector3(0f, 0.5f, 0f), Vector3.back, Vector2.zero);
-            leafMb.Triangle(new Vector3(0f, -0.5f, 0f), new Vector3(0f, 0.5f, 0f), new Vector3(-0.35f, 0f, 0f), Vector3.back, Vector2.zero);
-            Mesh leafMesh = GeneratedAssetStore.SaveMesh(leafMb.ToMesh("Gen_LeafParticle"), $"{AssetFolder}/Gen_LeafParticle.asset");
-
+            leafMesh = AssetDatabase.LoadAssetAtPath<Mesh>($"{AssetFolder}/Gen_LeafParticle.asset");
+            if (leafMesh == null)
+            {
+                var leafMb = new MeshBuilder();
+                leafMb.Triangle(new Vector3(0f, -0.5f, 0f), new Vector3(0.35f, 0f, 0f), new Vector3(0f, 0.5f, 0f), Vector3.back, Vector2.zero);
+                leafMb.Triangle(new Vector3(0f, -0.5f, 0f), new Vector3(0f, 0.5f, 0f), new Vector3(-0.35f, 0f, 0f), Vector3.back, Vector2.zero);
+                leafMesh = GeneratedAssetStore.SaveMesh(leafMb.ToMesh("Gen_LeafParticle"), $"{AssetFolder}/Gen_LeafParticle.asset");
+            }
             string materialPath = $"{AssetFolder}/M_LeafParticle.mat";
-            var material = AssetDatabase.LoadAssetAtPath<Material>(materialPath);
+            material = AssetDatabase.LoadAssetAtPath<Material>(materialPath);
             if (material == null)
             {
                 Shader shader = Shader.Find("Universal Render Pipeline/Particles/Unlit");
@@ -67,7 +71,11 @@ namespace Greenhaven.Editor.WindTools
                     AssetDatabase.SetLabels(material, new[] { GeneratedAssetStore.Label });
                 }
             }
+        }
 
+        public static LeafDrift AddLeafDrift()
+        {
+            EnsureLeafAssets(out Mesh leafMesh, out Material material);
             var go = new GameObject("LeafDrift");
             var leaves = go.AddComponent<LeafDrift>();
             var so = new SerializedObject(leaves);
