@@ -45,7 +45,7 @@ namespace Greenhaven.Editor
 
         static Dictionary<string, Material> materials;
 
-        [MenuItem("Greenhaven/Build Phase 1 Scene")]
+        [MenuItem("Greenhaven/Build Original Region Scene (Phase 1)", priority = 100)]
         public static void Build()
         {
             if (EditorApplication.isPlaying)

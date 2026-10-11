@@ -71,6 +71,23 @@ namespace Greenhaven.Editor.AssetGenerator
         [MenuItem("Greenhaven/Create Village Scene", priority = 40)]
         static void CreateVillageMenu() => Report("Create Village Scene", VillageSceneBuilder.Build(GeneratorPrefs.Settings, GeneratorPrefs.TreeDensity));
 
+        [MenuItem("Greenhaven/Open Village Scene", priority = 41)]
+        static void OpenVillageMenu()
+        {
+            if (EditorApplication.isPlaying)
+            {
+                EditorUtility.DisplayDialog("Open Village Scene", "Stop Play mode first.", "OK");
+                return;
+            }
+            if (!System.IO.File.Exists(VillageSceneBuilder.ScenePath))
+            {
+                EditorUtility.DisplayDialog("Open Village Scene", "The village scene has not been created yet. Use Greenhaven ▸ Create Village Scene.", "OK");
+                return;
+            }
+            if (UnityEditor.SceneManagement.EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo())
+                UnityEditor.SceneManagement.EditorSceneManager.OpenScene(VillageSceneBuilder.ScenePath);
+        }
+
         [MenuItem("Greenhaven/Validate Generated Assets", priority = 60)]
         static void ValidateMenu() => Report("Validate Generated Assets", GeneratedAssetStore.ValidateAll());
 
