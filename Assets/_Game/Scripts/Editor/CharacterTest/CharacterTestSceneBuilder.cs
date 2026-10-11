@@ -72,6 +72,7 @@ namespace Greenhaven.Editor.CharacterTest
             GameObject player = Phase1SceneBuilder.BuildPlayer(new Vector3(0f, 0.05f, -4f), "Player_CharacterTest", hero);
             Phase1SceneBuilder.BuildCamera(player);
             WeatherTools.WeatherSetup.AddToScene();
+            WindTools.WindSetup.AddToScene();
             var overlay = new SerializedObject(player.GetComponent<Greenhaven.Player.AnimationDebugOverlay>());
             overlay.FindProperty("visibleOnStart").boolValue = true; // show animation state by default here
             overlay.ApplyModifiedPropertiesWithoutUndo();

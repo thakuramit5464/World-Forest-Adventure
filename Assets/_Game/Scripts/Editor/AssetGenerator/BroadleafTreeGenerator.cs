@@ -31,6 +31,10 @@ namespace Greenhaven.Editor.AssetGenerator
             float trunkRadius = height * 0.05f;
             var mb = new MeshBuilder();
 
+            // Wind: bend grows with height (roots fixed); only the canopy flutters.
+            System.Func<Vector3, Vector3> Bend(float flutter) => p => new Vector3(Mathf.Pow(Mathf.Clamp01(p.y / height), 1.6f), flutter, 1f);
+            mb.Wind = Bend(0f);
+
             int bark = GenPalette.PickShade(rng, 3, v);
             System.Func<Vector3, Vector2> barkUv = n => GenPalette.UV(Ramp.Bark, bark + (n.y > 0.5f ? 1 : 0) + GenPalette.FaceJitter(rng, v));
             Shapes.Frustum(mb, Vector3.zero, Vector3.up, trunkTop, trunkRadius, trunkRadius * 0.65f, 7, barkUv, capTop: false);
@@ -62,6 +66,7 @@ namespace Greenhaven.Editor.AssetGenerator
                 return GenPalette.UV(Ramp.LeafGreen, shade);
             };
 
+            mb.Wind = Bend(0.8f);
             Shapes.Blob(mb, rng, canopyCentre, mainRadius, blobScale, 0.12f, 1, leafUv);
             foreach (Vector3 tip in tips)
             {

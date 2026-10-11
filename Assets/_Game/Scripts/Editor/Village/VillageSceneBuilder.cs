@@ -346,6 +346,7 @@ namespace Greenhaven.Editor.VillageScene
             player = Phase1SceneBuilder.BuildPlayer(OnGround(SpawnXZ, 0.05f));
             Phase1SceneBuilder.BuildCamera(player);
             WeatherTools.WeatherSetup.AddToScene();
+            WindTools.WindSetup.AddToScene();
             var registry = new GameObject("CollectibleRegistry").AddComponent<CollectibleRegistry>();
             var quests = new GameObject("QuestManager").AddComponent<QuestManager>();
             Phase1SceneBuilder.SetRef(quests, "registry", registry);

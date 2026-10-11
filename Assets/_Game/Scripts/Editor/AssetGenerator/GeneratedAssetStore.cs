@@ -23,6 +23,12 @@ namespace Greenhaven.Editor.AssetGenerator
         public const string Label = "GreenhavenGenerated";
 
 
+        /// <summary>Categories whose prefabs use the shared wind material (Greenhaven/WindLit). Others stay static.</summary>
+        public static readonly HashSet<AssetCategory> WindCategories = new HashSet<AssetCategory>
+        {
+            AssetCategory.PineTree, AssetCategory.BroadleafTree, AssetCategory.Grass,
+        };
+
         public struct Request
         {
             public IAssetGenerator Generator;
@@ -71,7 +77,7 @@ namespace Greenhaven.Editor.AssetGenerator
             }
 
             EnsureFolders();
-            var materials = new Dictionary<Palette, Material>();
+            var materials = new Dictionary<(Palette, bool), Material>();
             var report = new StringBuilder();
             int created = 0, replaced = 0, triangles = 0;
 
@@ -84,8 +90,9 @@ namespace Greenhaven.Editor.AssetGenerator
 
                     GeneratedMesh generated = gen.Build(settings, variant, name);
                     bool existed = AssetDatabase.LoadMainAssetAtPath(MeshPath(name)) != null;
-                    if (!materials.TryGetValue(gen.Palette, out Material material))
-                        materials[gen.Palette] = material = EnsurePaletteMaterial(gen.Palette);
+                    bool wind = WindCategories.Contains(gen.Category);
+                    if (!materials.TryGetValue((gen.Palette, wind), out Material material))
+                        materials[(gen.Palette, wind)] = material = wind ? EnsureWindMaterial(gen.Palette) : EnsurePaletteMaterial(gen.Palette);
                     Mesh meshAsset = SaveMesh(generated.Mesh, MeshPath(name), settings);
                     SavePrefab(name, meshAsset, material, generated);
 
@@ -156,6 +163,9 @@ namespace Greenhaven.Editor.AssetGenerator
             target.vertices = source.vertices;
             target.normals = source.normals;
             target.uv = source.uv;
+            var wind = new List<Vector3>();
+            source.GetUVs(2, wind);
+            if (wind.Count == source.vertexCount) target.SetUVs(2, wind); // wind data for Greenhaven/WindLit
             BoneWeight[] weights = source.boneWeights;
             if (weights.Length == source.vertexCount && weights.Length > 0) target.boneWeights = weights;
             target.bindposes = source.bindposes;
@@ -279,6 +289,36 @@ namespace Greenhaven.Editor.AssetGenerator
                 material.SetTexture("_BaseMap", palette);
                 material.mainTexture = palette;
                 material.SetColor("_BaseColor", Color.white);
+                EditorUtility.SetDirty(material);
+            }
+            return material;
+        }
+
+        /// <summary>
+        /// Shared wind material for a palette (Greenhaven/WindLit): one material for every wind-animated plant
+        /// of that palette, so batching is preserved. Wind amplitude/flutter defaults can be tuned on the asset.
+        /// </summary>
+        public static Material EnsureWindMaterial(Palette paletteDef)
+        {
+            Material palette = EnsurePaletteMaterial(paletteDef); // makes sure the palette texture exists
+            string path = $"{MaterialFolder}/M_Gen_{paletteDef.Name}Wind.mat";
+            var material = AssetDatabase.LoadAssetAtPath<Material>(path);
+            if (material == null)
+            {
+                Shader shader = Shader.Find("Greenhaven/WindLit");
+                if (shader == null)
+                {
+                    Debug.LogWarning("Greenhaven: Greenhaven/WindLit shader not found; using the static palette material.");
+                    return palette;
+                }
+                material = new Material(shader) { name = $"M_Gen_{paletteDef.Name}Wind" };
+                AssetDatabase.CreateAsset(material, path);
+                AssetDatabase.SetLabels(material, new[] { Label });
+            }
+            Texture texture = palette.GetTexture("_BaseMap");
+            if (material.GetTexture("_BaseMap") != texture)
+            {
+                material.SetTexture("_BaseMap", texture);
                 EditorUtility.SetDirty(material);
             }
             return material;

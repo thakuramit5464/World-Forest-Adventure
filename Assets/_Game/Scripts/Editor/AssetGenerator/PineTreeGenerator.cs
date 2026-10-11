@@ -32,11 +32,15 @@ namespace Greenhaven.Editor.AssetGenerator
             float trunkRadius = height * (style == 1 ? 0.028f : style == 2 ? 0.045f : 0.035f);
 
             var mb = new MeshBuilder();
+            // Wind: pines are stiffer and slower than broadleaf trees; roots fixed, tiers flutter slightly.
+            System.Func<Vector3, Vector3> Bend(float flutter) => p => new Vector3(0.7f * Mathf.Pow(Mathf.Clamp01(p.y / height), 1.6f), flutter, 0.8f);
+            mb.Wind = Bend(0f);
 
             int bark = GenPalette.PickShade(rng, 3, v);
             Shapes.Frustum(mb, Vector3.zero, Vector3.up, height * 0.4f, trunkRadius, trunkRadius * 0.55f, 6,
                 n => GenPalette.UV(Ramp.Bark, bark + GenPalette.FaceJitter(rng, v)), capTop: false);
 
+            mb.Wind = Bend(0.35f);
             int green = GenPalette.PickShade(rng, 3, v);
             for (int i = 0; i < layers; i++)
             {

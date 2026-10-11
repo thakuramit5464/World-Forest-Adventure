@@ -124,3 +124,10 @@ Legend: `[x]` done and verified · `[~]` implemented and compiles, Play-mode/dev
 - [ ] Owner check in Play mode: switch Sunny → Rainy → Foggy → Sunny; confirm the original look returns and the rain stays around the player.
 - [ ] Android check: rain particle cost and fog on a low-end device.
 - [ ] Phase 2: tune and test Cloudy, then consider snow, thunderstorms, a wind shader for vegetation, and a rain audio clip (CC0).
+
+## Wind
+- [~] Stage 1: WindManager (gusts, seeded variation, presets, weather link), Greenhaven/WindLit shader, wind data in pine, broadleaf and new grass generators, Wind Test scene, menus and inspector, EditMode tests.
+- [ ] Owner visual check in the Wind Test scene (roots anchored, no cracks, gusts smooth).
+- [ ] Stage 2: bushes and flowers; place grass in the village scatter.
+- [ ] Stage 3: wind-reactive signs and banners (C#, using WindManager.Sway); leaf and petal particles.
+- [ ] Android profiling: vertex cost of WindLit, batching check in the Frame Debugger.

@@ -17,6 +17,7 @@ namespace Greenhaven.Editor.AssetGenerator
         readonly List<Vector2> uvs = new List<Vector2>();
         readonly List<int> triangles = new List<int>();
         readonly List<BoneWeight> boneWeights = new List<BoneWeight>();
+        readonly List<Vector3> windData = new List<Vector3>();
 
         public int TriangleCount => triangles.Count / 3;
 
@@ -25,6 +26,14 @@ namespace Greenhaven.Editor.AssetGenerator
         /// position. Change it between body parts to weight each part to its bones.
         /// </summary>
         public Func<Vector3, BoneWeight> Skin;
+
+        /// <summary>
+        /// Optional wind data (stored in UV2 for the Greenhaven/WindLit shader): x = bend (0 at the root),
+        /// y = flutter, z = frequency multiplier. Evaluated per vertex position, so coincident vertices of
+        /// faceted meshes get identical values and move together. Parts added while it is null get zero
+        /// (no movement).
+        /// </summary>
+        public Func<Vector3, Vector3> Wind;
 
         /// <summary>Face normal of (a, b, c) flipped to agree with <paramref name="outward"/>.</summary>
         public static Vector3 OrientedNormal(Vector3 a, Vector3 b, Vector3 c, Vector3 outward)
@@ -66,6 +75,13 @@ namespace Greenhaven.Editor.AssetGenerator
                 boneWeights.Add(Skin(b));
                 boneWeights.Add(Skin(c));
             }
+            if (Wind != null || windData.Count > 0)
+            {
+                while (windData.Count < i) windData.Add(Vector3.zero); // earlier parts had no wind
+                windData.Add(Wind != null ? Wind(a) : Vector3.zero);
+                windData.Add(Wind != null ? Wind(b) : Vector3.zero);
+                windData.Add(Wind != null ? Wind(c) : Vector3.zero);
+            }
         }
 
         /// <summary>Adds the triangle facing both ways (thin cards such as petals and leaves).</summary>
@@ -87,6 +103,7 @@ namespace Greenhaven.Editor.AssetGenerator
             mesh.SetUVs(0, uvs);
             mesh.SetTriangles(triangles, 0, true);
             if (boneWeights.Count == vertices.Count && boneWeights.Count > 0) mesh.boneWeights = boneWeights.ToArray();
+            if (windData.Count == vertices.Count && windData.Count > 0) mesh.SetUVs(2, windData);
             mesh.RecalculateBounds();
             return mesh;
         }

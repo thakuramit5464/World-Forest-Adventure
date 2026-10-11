@@ -42,6 +42,9 @@ namespace Greenhaven.Weather
         public float TransitionProgress => transitionLength <= 0f ? 1f : Mathf.Clamp01(transitionTime / transitionLength);
         public bool IsTransitioning => TransitionProgress < 1f;
 
+        /// <summary>Current (blended) wind level 0..1 from the weather — read by WindManager.</summary>
+        public float Wind => current.Wind;
+
         /// <summary>Raised when a new weather state is requested: (previous, next).</summary>
         public event Action<WeatherState, WeatherState> WeatherChanged;
 

@@ -11,6 +11,7 @@ namespace Greenhaven.Editor.AssetGenerator
         Rock = 3,
         Bush = 4,
         Flower = 5,
+        Grass = 6,
 
         Cottage = 10,
         House = 11,
@@ -109,6 +110,7 @@ namespace Greenhaven.Editor.AssetGenerator
             new RockGenerator(),
             new BushGenerator(),
             new FlowerGenerator(),
+            new GrassGenerator(),
             new BuildingGenerator(AssetCategory.Cottage),
             new BuildingGenerator(AssetCategory.House),
             new BuildingGenerator(AssetCategory.Shop),
