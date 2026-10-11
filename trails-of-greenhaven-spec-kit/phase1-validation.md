@@ -37,8 +37,12 @@ In the Editor you can click and drag the on-screen joystick and buttons with the
 | 8 | Walk to the signpost, then to Mira (by the well) | "Read Signpost" or "Talk to Mira" appears and the Interact button brightens |
 | 9 | Interact with Mira repeatedly | Shows 3 lines, then closes. The prompt reads "Continue" while the dialogue is open |
 | 10 | Walk away mid-dialogue | Dialogue closes |
-| 11 | Window ▸ General ▸ Test Runner ▸ EditMode ▸ Run All | 22 test cases pass (`MovementMathTests` 9, `InteractionScoringTests` 5, `CollectedItemsTests` 8) |
-| 12 | Find the 3 supply crates (2 along the north trail, 1 on top of Lookout Hill) | "Pick up Supply Crate" appears. Picking one up hides it, and the counter reads "Supplies 1/3" and pops |
+| 11 | Window ▸ General ▸ Test Runner ▸ EditMode ▸ Run All | 30 test cases pass (`MovementMathTests` 9, `InteractionScoringTests` 5, `CollectedItemsTests` 8, `QuestLogTests` 8) |
+| 12 | Talk to Mira | A "New Quest: The Missing Supplies" banner appears, and the tracker shows "Find the missing supply crates (0/3)" |
+| 12b | Find the 3 crates (2 along the north trail, 1 on top of Lookout Hill) | Each pickup hides the crate and updates the tracker. At 3/3 it switches to "Bring the supplies back to Mira" |
+| 12c | Talk to Mira again | "Quest Complete!" banner, then her thank-you lines. Talking to Rowan now offers "A Villager's Request" |
+| 12d | Before finishing Mira's quest, talk to Rowan | Only chat, no quest offered (prerequisite) |
+| 12e | Find the spectacles by the Great Old Oak, then return to Rowan | Tracker advances, and the quest completes with Rowan's map hint |
 | 13 | Mash Interact while standing on a crate | Counts once only. The prompt moves to the next nearby target or disappears |
 
 ## 4. Performance notes and risks (unmeasured)

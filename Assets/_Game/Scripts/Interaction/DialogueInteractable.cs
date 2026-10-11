@@ -1,3 +1,4 @@
+using Greenhaven.Quests;
 using Greenhaven.UI;
 using UnityEngine;
 
@@ -21,6 +22,9 @@ namespace Greenhaven.Interaction
         [SerializeField, Tooltip("Optional. Its \"Talking\" bool is true while this dialogue is open.")]
         Animator talkAnimator;
 
+        [SerializeField, Tooltip("Optional. Picks quest-specific lines (offer/progress/complete) instead of the lines above.")]
+        QuestGiver questGiver;
+
         static readonly int TalkingId = Animator.StringToHash("Talking");
         bool wasTalking;
 
@@ -36,6 +40,7 @@ namespace Greenhaven.Interaction
         void Awake()
         {
             startPrompt = $"{promptVerb} {speakerName}";
+            if (questGiver == null) TryGetComponent(out questGiver);
             if (dialogueView == null)
                 Debug.LogWarning($"{nameof(DialogueInteractable)} '{name}' has no {nameof(DialogueView)} assigned; dialogue will not display.", this);
         }
@@ -57,7 +62,8 @@ namespace Greenhaven.Interaction
                 look.y = 0f;
                 if (look.sqrMagnitude > 0.01f) transform.rotation = Quaternion.LookRotation(look);
             }
-            dialogueView.Show(this, speakerName, lines);
+            string[] toSay = questGiver != null ? questGiver.BeginConversation() ?? lines : lines;
+            dialogueView.Show(this, speakerName, toSay);
         }
 
         void Update()

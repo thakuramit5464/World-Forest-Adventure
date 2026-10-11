@@ -11,6 +11,7 @@ GameObject:
   - component: {fileID: 679725031168007607}
   - component: {fileID: 4006822896223829560}
   - component: {fileID: 1166821377014259208}
+  - component: {fileID: 4786729429985983049}
   m_Layer: 0
   m_Name: NPC_Mira
   m_TagString: Untagged
@@ -72,13 +73,38 @@ MonoBehaviour:
   speakerName: Mira
   promptVerb: Talk to
   lines:
-  - Oh! A new face in Greenhaven. Welcome, traveller!
-  - I bake bread for the whole village. The well behind me is the heart of our little plaza.
-  - Follow the trail north and you'll reach the Whispering Forest gate. Mind your step on the lookout stones to the east!
+  - Hello again, traveller! The well behind me is the heart of our little plaza.
   dialogueView: {fileID: 0}
   interactionPoint: {fileID: 0}
   faceInteractor: 1
   talkAnimator: {fileID: 0}
+  questGiver: {fileID: 0}
+--- !u!114 &4786729429985983049
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 659697901523167563}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e206e65ff0efd054d87db3a7b8a77fd0, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Greenhaven::Greenhaven.Quests.QuestGiver
+  manager: {fileID: 0}
+  quest: {fileID: 11400000, guid: 772fddb8a45cc924798496c0f2d1add1, type: 2}
+  npcId: mira
+  offerLines:
+  - Oh! A new face in Greenhaven. Welcome, traveller!
+  - Could you help me? Three supply crates fell off my cart somewhere along the forest trail.
+  - Rowan swears one rolled all the way up Lookout Hill, east of here. Bring them back and I'll bake you something special!
+  activeLines:
+  - Any luck with the crates? Try the trail north... and the top of Lookout Hill.
+  completeLines:
+  - You found all three! Greenhaven owes you one, explorer.
+  - Here, still-warm honey bread. Oh, and Elder Rowan was asking for you. He's on the bench by his house.
+  doneLines:
+  - Thanks again for the supplies! The whole village eats well tonight.
 --- !u!1 &5976719815822824473
 GameObject:
   m_ObjectHideFlags: 0

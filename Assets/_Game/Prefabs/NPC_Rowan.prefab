@@ -11,6 +11,7 @@ GameObject:
   - component: {fileID: 2655619859522870194}
   - component: {fileID: 7741430512741339601}
   - component: {fileID: 7222621971516274580}
+  - component: {fileID: 3575623554127917267}
   m_Layer: 0
   m_Name: NPC_Rowan
   m_TagString: Untagged
@@ -74,12 +75,37 @@ MonoBehaviour:
   lines:
   - Ah, young explorer. I am Rowan, elder of Greenhaven.
   - When I was your age I climbed all the way to Cloudpeak. The view... you never forget it.
-  - Our supply crates went missing along the forest trail. If you find them, Mira would be grateful.
-  - And the Great Old Oak to the west? Older than the village itself. Go and say hello.
+  - Mira looks worried about something. Have you spoken to her by the well?
   dialogueView: {fileID: 0}
   interactionPoint: {fileID: 0}
   faceInteractor: 0
   talkAnimator: {fileID: 0}
+  questGiver: {fileID: 0}
+--- !u!114 &3575623554127917267
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3872528034411442879}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e206e65ff0efd054d87db3a7b8a77fd0, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Greenhaven::Greenhaven.Quests.QuestGiver
+  manager: {fileID: 0}
+  quest: {fileID: 11400000, guid: 34dbaa4e545bcba4dbb641b079124a90, type: 2}
+  npcId: rowan
+  offerLines:
+  - Mira tells me you're quite the finder of lost things!
+  - I dropped my spectacles while resting under the Great Old Oak, west of the village. Would you fetch them for an old man?
+  activeLines:
+  - My spectacles should be by the roots of the Great Old Oak. West of here, you can't miss it.
+  completeLines:
+  - My spectacles! Now I can read the old map again...
+  - It shows a path up to Cloudpeak. When you're ready, we'll talk about the Mountain Clue.
+  doneLines:
+  - Cloudpeak awaits, explorer. That clue won't solve itself!
 --- !u!1 &7846459290245411506
 GameObject:
   m_ObjectHideFlags: 0

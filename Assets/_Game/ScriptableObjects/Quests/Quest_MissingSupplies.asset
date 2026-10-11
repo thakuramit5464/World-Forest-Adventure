@@ -1,0 +1,27 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 81d53b96899f0934c9051150fea62b00, type: 3}
+  m_Name: Quest_MissingSupplies
+  m_EditorClassIdentifier: Greenhaven::Greenhaven.Quests.QuestDefinition
+  questId: missing_supplies
+  title: The Missing Supplies
+  summary: Mira's supply crates fell off her cart along the forest trail.
+  prerequisite: {fileID: 0}
+  steps:
+  - description: Find the missing supply crates
+    type: 0
+    targetId: supply
+    requiredCount: 3
+  - description: Bring the supplies back to Mira
+    type: 1
+    targetId: mira
+    requiredCount: 1

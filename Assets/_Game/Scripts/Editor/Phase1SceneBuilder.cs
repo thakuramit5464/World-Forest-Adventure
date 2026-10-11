@@ -5,6 +5,7 @@ using Greenhaven.Collectibles;
 using Greenhaven.Core;
 using Greenhaven.Interaction;
 using Greenhaven.Player;
+using Greenhaven.Quests;
 using Greenhaven.UI;
 using UnityEditor;
 using UnityEditor.SceneManagement;
@@ -46,6 +47,11 @@ namespace Greenhaven.Editor
         [MenuItem("Greenhaven/Build Phase 1 Scene")]
         public static void Build()
         {
+            if (EditorApplication.isPlaying)
+            {
+                EditorUtility.DisplayDialog("Stop Play mode first", "The Greenhaven scene can only be rebuilt outside Play mode.", "OK");
+                return;
+            }
             if (File.Exists(ScenePath) && !EditorUtility.DisplayDialog("Rebuild Greenhaven scene?",
                     $"{ScenePath} already exists and will be replaced. Manual edits to that scene will be lost.",
                     "Rebuild", "Cancel"))
@@ -84,10 +90,12 @@ namespace Greenhaven.Editor
             GameObject player = BuildPlayer();
             BuildCamera(player);
             CollectibleRegistry registry = new GameObject("CollectibleRegistry").AddComponent<CollectibleRegistry>();
-            DialogueView dialogue = BuildHud(player, registry);
-            BuildNpcs(dialogue);
+            QuestManager quests = BuildQuests(registry, out QuestDefinition supplies, out QuestDefinition request);
+            DialogueView dialogue = BuildHud(player, quests);
+            BuildNpcs(dialogue, quests, supplies, request);
             BuildSign(dialogue);
             BuildSupplies(registry);
+            BuildSpectacles(registry);
 
             int badRefs = ValidateSceneReferences(scene);
             EditorSceneManager.SaveScene(scene, ScenePath);
@@ -540,12 +548,27 @@ namespace Greenhaven.Editor
             return SaveAndConnectPrefab(player, "Player");
         }
 
-        static void BuildNpcs(DialogueView dialogue)
+        static void BuildNpcs(DialogueView dialogue, QuestManager quests, QuestDefinition supplies, QuestDefinition request)
         {
             BuildNpc(dialogue, "Mira", new Vector3(3.5f, 0f, -0.5f), 200f, "miraSkin", "Idle_Loop", "Idle_Talking_Loop",
-                "Oh! A new face in Greenhaven. Welcome, traveller!",
-                "I bake bread for the whole village. The well behind me is the heart of our little plaza.",
-                "Follow the trail north and you'll reach the Whispering Forest gate. Mind your step on the lookout stones to the east!");
+                quests, new QuestLines
+                {
+                    Quest = supplies,
+                    Offer = new[]
+                    {
+                        "Oh! A new face in Greenhaven. Welcome, traveller!",
+                        "Could you help me? Three supply crates fell off my cart somewhere along the forest trail.",
+                        "Rowan swears one rolled all the way up Lookout Hill, east of here. Bring them back and I'll bake you something special!",
+                    },
+                    Active = new[] { "Any luck with the crates? Try the trail north... and the top of Lookout Hill." },
+                    Complete = new[]
+                    {
+                        "You found all three! Greenhaven owes you one, explorer.",
+                        "Here, still-warm honey bread. Oh, and Elder Rowan was asking for you. He's on the bench by his house.",
+                    },
+                    Done = new[] { "Thanks again for the supplies! The whole village eats well tonight." },
+                },
+                "Hello again, traveller! The well behind me is the heart of our little plaza.");
 
             // Elder Rowan sits on a bench beside the Elder's House.
             Vector3 benchPos = new Vector3(-7.9f, 0f, 11.3f);
@@ -558,17 +581,40 @@ namespace Greenhaven.Editor
             LocalPrim(PrimitiveType.Cube, "LegR", bench, new Vector3(0.75f, 0.2f, -0.15f), new Vector3(0.1f, 0.4f, 0.45f), "Timber", collider: false);
             BuildNpc(dialogue, "Rowan", benchPos + Quaternion.Euler(0f, benchYaw, 0f) * new Vector3(0f, 0f, RowanSeatForwardOffset), benchYaw,
                 "elderSkin", "Sitting_Idle_Loop", "Sitting_Talking_Loop",
+                quests, new QuestLines
+                {
+                    Quest = request,
+                    Offer = new[]
+                    {
+                        "Mira tells me you're quite the finder of lost things!",
+                        "I dropped my spectacles while resting under the Great Old Oak, west of the village. Would you fetch them for an old man?",
+                    },
+                    Active = new[] { "My spectacles should be by the roots of the Great Old Oak. West of here, you can't miss it." },
+                    Complete = new[]
+                    {
+                        "My spectacles! Now I can read the old map again...",
+                        "It shows a path up to Cloudpeak. When you're ready, we'll talk about the Mountain Clue.",
+                    },
+                    Done = new[] { "Cloudpeak awaits, explorer. That clue won't solve itself!" },
+                },
+                // Before Mira's quest is done, Rowan just chats.
                 "Ah, young explorer. I am Rowan, elder of Greenhaven.",
                 "When I was your age I climbed all the way to Cloudpeak. The view... you never forget it.",
-                "Our supply crates went missing along the forest trail. If you find them, Mira would be grateful.",
-                "And the Great Old Oak to the west? Older than the village itself. Go and say hello.");
+                "Mira looks worried about something. Have you spoken to her by the well?");
+        }
+
+        /// <summary>Quest-specific dialogue for an NPC quest giver.</summary>
+        sealed class QuestLines
+        {
+            public QuestDefinition Quest;
+            public string[] Offer, Active, Complete, Done;
         }
 
         // How far in front of the bench's centre Rowan's root sits. Tune if the sitting pose floats or clips.
         const float RowanSeatForwardOffset = 0.1f;
 
         static void BuildNpc(DialogueView dialogue, string speaker, Vector3 position, float yaw, string skin,
-            string idleClip, string talkClip, params string[] lines)
+            string idleClip, string talkClip, QuestManager quests, QuestLines questLines, params string[] lines)
         {
             var npc = new GameObject("NPC_" + speaker);
             npc.transform.SetPositionAndRotation(position, Quaternion.Euler(0f, yaw, 0f));
@@ -599,10 +645,72 @@ namespace Greenhaven.Editor
             SetStrings(so.FindProperty("lines"), lines);
             so.ApplyModifiedPropertiesWithoutUndo();
 
+            QuestGiver giver = null;
+            if (questLines != null && questLines.Quest != null)
+            {
+                giver = npc.AddComponent<QuestGiver>();
+                var gso = new SerializedObject(giver);
+                gso.FindProperty("quest").objectReferenceValue = questLines.Quest;
+                gso.FindProperty("npcId").stringValue = speaker.ToLowerInvariant();
+                SetStrings(gso.FindProperty("offerLines"), questLines.Offer ?? new string[0]);
+                SetStrings(gso.FindProperty("activeLines"), questLines.Active ?? new string[0]);
+                SetStrings(gso.FindProperty("completeLines"), questLines.Complete ?? new string[0]);
+                SetStrings(gso.FindProperty("doneLines"), questLines.Done ?? new string[0]);
+                gso.ApplyModifiedPropertiesWithoutUndo();
+            }
+
             GameObject instance = SaveAndConnectPrefab(npc, "NPC_" + speaker);
             // Scene references applied as instance overrides (prefab assets cannot reference scene objects).
             SetRef(instance.GetComponent<DialogueInteractable>(), "dialogueView", dialogue);
             if (animator != null) SetRef(instance.GetComponent<DialogueInteractable>(), "talkAnimator", animator);
+            if (giver != null)
+            {
+                SetRef(instance.GetComponent<QuestGiver>(), "manager", quests);
+                SetRef(instance.GetComponent<DialogueInteractable>(), "questGiver", instance.GetComponent<QuestGiver>());
+            }
+        }
+
+        // ───────────────────────────── Quests ─────────────────────────────
+
+        const string QuestFolder = GameRoot + "/ScriptableObjects/Quests";
+
+        static QuestManager BuildQuests(CollectibleRegistry registry, out QuestDefinition supplies, out QuestDefinition request)
+        {
+            EnsureFolder(QuestFolder);
+            supplies = QuestAsset("Quest_MissingSupplies", q => q.Configure("missing_supplies", "The Missing Supplies",
+                "Mira's supply crates fell off her cart along the forest trail.", null,
+                new QuestStep("Find the missing supply crates", ObjectiveType.Collect, "supply", 3),
+                new QuestStep("Bring the supplies back to Mira", ObjectiveType.TalkTo, "mira")));
+            QuestDefinition suppliesRef = supplies;
+            request = QuestAsset("Quest_VillagersRequest", q => q.Configure("villagers_request", "A Villager's Request",
+                "Elder Rowan lost his spectacles near the Great Old Oak.", suppliesRef,
+                new QuestStep("Find Rowan's spectacles near the Great Old Oak", ObjectiveType.Collect, "spectacles"),
+                new QuestStep("Return the spectacles to Rowan", ObjectiveType.TalkTo, "rowan")));
+
+            QuestManager manager = new GameObject("QuestManager").AddComponent<QuestManager>();
+            var so = new SerializedObject(manager);
+            SerializedProperty list = so.FindProperty("quests");
+            list.arraySize = 2;
+            list.GetArrayElementAtIndex(0).objectReferenceValue = supplies;
+            list.GetArrayElementAtIndex(1).objectReferenceValue = request;
+            so.FindProperty("registry").objectReferenceValue = registry;
+            so.ApplyModifiedPropertiesWithoutUndo();
+            return manager;
+        }
+
+        static QuestDefinition QuestAsset(string fileName, System.Action<QuestDefinition> configure)
+        {
+            string path = $"{QuestFolder}/{fileName}.asset";
+            var quest = AssetDatabase.LoadAssetAtPath<QuestDefinition>(path);
+            if (quest == null)
+            {
+                quest = ScriptableObject.CreateInstance<QuestDefinition>();
+                AssetDatabase.CreateAsset(quest, path);
+            }
+            configure(quest);
+            EditorUtility.SetDirty(quest);
+            AssetDatabase.SaveAssets();
+            return quest;
         }
 
         static void BuildSupplies(CollectibleRegistry registry)
@@ -616,7 +724,33 @@ namespace Greenhaven.Editor
 
         static void SupplyCrate(Transform parent, CollectibleRegistry registry, string id, Vector3 position)
         {
-            var root = new GameObject($"Supply_{id}");
+            CollectibleProp(parent, registry, id, "supply", "Supply Crate", position, 0.45f, visual =>
+            {
+                LocalPrim(PrimitiveType.Cube, "Crate", visual, Vector3.zero, Vector3.one * 0.6f, "Timber", collider: false);
+                LocalPrim(PrimitiveType.Cube, "BandH", visual, Vector3.zero, new Vector3(0.62f, 0.1f, 0.62f), "FlowerYellow", collider: false);
+                LocalPrim(PrimitiveType.Cube, "BandV", visual, Vector3.zero, new Vector3(0.1f, 0.62f, 0.62f), "FlowerYellow", collider: false);
+            });
+        }
+
+        static void BuildSpectacles(CollectibleRegistry registry)
+        {
+            // "A Villager's Request": by the roots of the Great Old Oak. Oversized so they read at phone scale.
+            CollectibleProp(null, registry, "spectacles_01", "spectacles", "Rowan's Spectacles", new Vector3(-17.4f, 0f, 27.2f), 0.5f, visual =>
+            {
+                Quaternion lens = Quaternion.Euler(90f, 0f, 0f);
+                LocalPrim(PrimitiveType.Cylinder, "LensL", visual, new Vector3(-0.2f, 0f, 0f), new Vector3(0.3f, 0.02f, 0.3f), "Water", collider: false, rotation: lens);
+                LocalPrim(PrimitiveType.Cylinder, "LensR", visual, new Vector3(0.2f, 0f, 0f), new Vector3(0.3f, 0.02f, 0.3f), "Water", collider: false, rotation: lens);
+                LocalPrim(PrimitiveType.Cube, "Bridge", visual, new Vector3(0f, 0.04f, 0f), new Vector3(0.12f, 0.03f, 0.03f), "FlowerYellow", collider: false);
+                LocalPrim(PrimitiveType.Cube, "ArmL", visual, new Vector3(-0.36f, 0.04f, -0.15f), new Vector3(0.03f, 0.03f, 0.3f), "FlowerYellow", collider: false);
+                LocalPrim(PrimitiveType.Cube, "ArmR", visual, new Vector3(0.36f, 0.04f, -0.15f), new Vector3(0.03f, 0.03f, 0.3f), "FlowerYellow", collider: false);
+            });
+        }
+
+        /// <summary>A bobbing, spinning pickup with a stable ID and a trigger the interactor can find.</summary>
+        static void CollectibleProp(Transform parent, CollectibleRegistry registry, string id, string itemType, string displayName,
+            Vector3 position, float visualHeight, System.Action<Transform> buildVisual)
+        {
+            var root = new GameObject($"Collectible_{id}");
             root.transform.SetParent(parent, false);
             root.transform.position = position;
             SphereCollider trigger = root.AddComponent<SphereCollider>();
@@ -625,18 +759,16 @@ namespace Greenhaven.Editor
             trigger.radius = 0.6f;
 
             Transform visual = Group("Visual", root.transform);
-            visual.localPosition = new Vector3(0f, 0.45f, 0f);
-            LocalPrim(PrimitiveType.Cube, "Crate", visual, Vector3.zero, Vector3.one * 0.6f, "Timber", collider: false);
-            LocalPrim(PrimitiveType.Cube, "BandH", visual, Vector3.zero, new Vector3(0.62f, 0.1f, 0.62f), "FlowerYellow", collider: false);
-            LocalPrim(PrimitiveType.Cube, "BandV", visual, Vector3.zero, new Vector3(0.1f, 0.62f, 0.62f), "FlowerYellow", collider: false);
+            visual.localPosition = new Vector3(0f, visualHeight, 0f);
+            buildVisual(visual);
             // Bobbing objects must not be static-batched.
             foreach (Transform t in root.GetComponentsInChildren<Transform>()) GameObjectUtility.SetStaticEditorFlags(t.gameObject, 0);
 
             Collectible c = root.AddComponent<Collectible>();
             var so = new SerializedObject(c);
             so.FindProperty("collectibleId").stringValue = id;
-            so.FindProperty("itemType").stringValue = "supply";
-            so.FindProperty("displayName").stringValue = "Supply Crate";
+            so.FindProperty("itemType").stringValue = itemType;
+            so.FindProperty("displayName").stringValue = displayName;
             so.FindProperty("registry").objectReferenceValue = registry;
             so.FindProperty("visual").objectReferenceValue = visual;
             so.ApplyModifiedPropertiesWithoutUndo();
@@ -678,7 +810,7 @@ namespace Greenhaven.Editor
 
         // ───────────────────────────── HUD ─────────────────────────────
 
-        static DialogueView BuildHud(GameObject player, CollectibleRegistry registry)
+        static DialogueView BuildHud(GameObject player, QuestManager quests)
         {
             PlayerInputReader input = player.GetComponent<PlayerInputReader>();
             PlayerInteractor interactor = player.GetComponent<PlayerInteractor>();
@@ -742,18 +874,44 @@ namespace Greenhaven.Editor
             promptBg.raycastTarget = false;
             Text promptText = UiText("Text", prompt, font, 40, TextAnchor.MiddleCenter, Color.white);
 
-            // Collectible counter (top-left).
-            RectTransform counter = UiRect("SupplyCounter", safe, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(230f, -80f), new Vector2(380f, 90f));
-            Image counterBg = counter.gameObject.AddComponent<Image>();
-            counterBg.sprite = rounded;
-            counterBg.type = Image.Type.Sliced;
-            counterBg.color = new Color(0.1f, 0.12f, 0.16f, 0.7f);
-            counterBg.raycastTarget = false;
-            Text counterText = UiText("Text", counter, font, 42, TextAnchor.MiddleCenter, new Color(1f, 0.9f, 0.6f));
-            CollectibleCounterView counterView = canvasGo.AddComponent<CollectibleCounterView>();
-            SetRef(counterView, "registry", registry);
-            SetRef(counterView, "root", counter.gameObject);
-            SetRef(counterView, "counterText", counterText);
+            // Quest tracker (top-left): title + current objective.
+            RectTransform tracker = UiRect("QuestTracker", safe, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(330f, -95f), new Vector2(600f, 130f));
+            Image trackerBg = tracker.gameObject.AddComponent<Image>();
+            trackerBg.sprite = rounded;
+            trackerBg.type = Image.Type.Sliced;
+            trackerBg.color = new Color(0.1f, 0.12f, 0.16f, 0.7f);
+            trackerBg.raycastTarget = false;
+            Text trackerTitle = UiText("Title", tracker, font, 34, TextAnchor.UpperLeft, new Color(1f, 0.85f, 0.45f));
+            trackerTitle.fontStyle = FontStyle.Bold;
+            trackerTitle.rectTransform.offsetMin = new Vector2(24f, 0f);
+            trackerTitle.rectTransform.offsetMax = new Vector2(-20f, -14f);
+            Text trackerObjective = UiText("Objective", tracker, font, 32, TextAnchor.LowerLeft, Color.white);
+            trackerObjective.rectTransform.offsetMin = new Vector2(24f, 16f);
+            trackerObjective.rectTransform.offsetMax = new Vector2(-20f, 0f);
+            QuestTrackerView trackerView = canvasGo.AddComponent<QuestTrackerView>();
+            SetRef(trackerView, "manager", quests);
+            SetRef(trackerView, "root", tracker.gameObject);
+            SetRef(trackerView, "titleText", trackerTitle);
+            SetRef(trackerView, "objectiveText", trackerObjective);
+
+            // Quest milestone banner (top-centre).
+            RectTransform toast = UiRect("QuestToast", safe, new Vector2(0.5f, 1f), new Vector2(0.5f, 1f), new Vector2(0f, -150f), new Vector2(820f, 170f));
+            Image toastBg = toast.gameObject.AddComponent<Image>();
+            toastBg.sprite = rounded;
+            toastBg.type = Image.Type.Sliced;
+            toastBg.color = new Color(1f, 0.96f, 0.86f, 0.95f);
+            toastBg.raycastTarget = false;
+            CanvasGroup toastGroup = toast.gameObject.AddComponent<CanvasGroup>();
+            Text toastHeader = UiText("Header", toast, font, 34, TextAnchor.UpperCenter, new Color(0.65f, 0.3f, 0.25f));
+            toastHeader.fontStyle = FontStyle.Bold;
+            toastHeader.rectTransform.offsetMax = new Vector2(0f, -18f);
+            Text toastTitle = UiText("Title", toast, font, 50, TextAnchor.LowerCenter, new Color(0.2f, 0.17f, 0.15f));
+            toastTitle.rectTransform.offsetMin = new Vector2(0f, 22f);
+            QuestToastView toastView = canvasGo.AddComponent<QuestToastView>();
+            SetRef(toastView, "manager", quests);
+            SetRef(toastView, "group", toastGroup);
+            SetRef(toastView, "headerText", toastHeader);
+            SetRef(toastView, "titleText", toastTitle);
 
             InteractionPromptView promptView = canvasGo.AddComponent<InteractionPromptView>();
             SetRef(promptView, "interactor", interactor);

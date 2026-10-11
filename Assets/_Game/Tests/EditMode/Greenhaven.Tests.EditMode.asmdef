@@ -3,6 +3,7 @@
     "rootNamespace": "Greenhaven.Tests",
     "references": [
         "Greenhaven",
+        "Greenhaven.Editor",
         "UnityEngine.TestRunner",
         "UnityEditor.TestRunner"
     ],
