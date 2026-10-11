@@ -124,8 +124,7 @@ namespace Greenhaven.Tests
             try
             {
                 var problems = new List<string>();
-                Assert.That(MeshValidator.Validate(hero.Mesh, problems), Is.True, string.Join("
-", problems));
+                Assert.That(MeshValidator.Validate(hero.Mesh, problems), Is.True, string.Join("\n", problems));
                 Assert.That(hero.Mesh.boneWeights.Length, Is.EqualTo(hero.Mesh.vertexCount));
                 Assert.That(hero.Mesh.bindposes.Length, Is.EqualTo(hero.Renderer.bones.Length));
                 Assert.That(hero.Avatar.isValid, Is.True, "avatar valid");
