@@ -1,0 +1,20 @@
+{
+    "name": "Greenhaven.Editor",
+    "rootNamespace": "Greenhaven.Editor",
+    "references": [
+        "Greenhaven",
+        "Unity.InputSystem",
+        "UnityEngine.UI"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": false,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

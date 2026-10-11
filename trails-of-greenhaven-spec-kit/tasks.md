@@ -2,40 +2,44 @@
 
 Mark tasks complete only after implementation and appropriate verification.
 
+Legend: `[x]` done and verified · `[~]` implemented and compiles, Play-mode/device verification pending · `[ ]` not started · *(deferred)* postponed by decision.
+
+> **2026-10-11:** The project owner's Phase 1 brief combines the movement slice with a starter environment and an interaction foundation (parts of Phases 2–3 below). Build target is desktop for now; Android comes later. See `plan.md` §9 and `phase1-validation.md`.
+
 ## Phase 0 — Project inspection and baseline
-- [ ] Record Unity version and installed packages.
-- [ ] Confirm URP project and Android build support.
-- [ ] Inspect current scenes, scripts, input settings, and assets.
+- [x] Record Unity version and installed packages. — 6000.6.5f1, URP 17.6.0, Input System 1.20.0, uGUI 2.6.0, Test Framework 1.8.0 (see `plan.md` §9).
+- [~] Confirm URP project and Android build support. — URP confirmed (Mobile/PC RP assets). Android Build Support module **not installed**; deferred by owner decision.
+- [x] Inspect current scenes, scripts, input settings, and assets. — Template only: `SampleScene`, URP TutorialInfo, template input actions; active input handler = Input System only.
 - [ ] Choose one representative low-end Android test device.
-- [ ] Create project folder structure and `ASSET_CREDITS.md`.
-- [ ] Make a baseline Android build and record any existing failures.
+- [x] Create project folder structure and `ASSET_CREDITS.md`. — `Assets/_Game/...` per `plan.md` §3.
+- [ ] Make a baseline Android build and record any existing failures. *(deferred until Android module is installed)*
 
 **Exit criteria:** project state is understood, the baseline build status is documented, and asset licenses are tracked.
 
 ## Phase 1 — Player movement slice
-- [ ] Import one rigged humanoid character.
-- [ ] Configure Animator Controller and required animation parameters.
-- [ ] Implement input abstraction.
-- [ ] Implement walking, running, gravity, jumping, and grounded checks.
-- [ ] Configure third-person camera follow and collision.
-- [ ] Add landscape mobile controls.
-- [ ] Build and test on a physical Android device.
+- [ ] Import one rigged humanoid character. — Placeholder primitive adventurer in use; asset choice pending.
+- [ ] Configure Animator Controller and required animation parameters. — Blocked on character asset.
+- [~] Implement input abstraction. — `PlayerInputReader`.
+- [~] Implement walking, running, gravity, jumping, and grounded checks. — `PlayerMotor` (coyote time, jump buffer, no air jumps, fall respawn).
+- [~] Configure third-person camera follow and collision. — `ThirdPersonCameraRig` (custom; Cinemachine not used).
+- [~] Add landscape mobile controls. — On-screen joystick, Jump, Interact, touch-look area, safe-area fitting.
+- [ ] Build and test on a physical Android device. *(deferred)*
 
 **Exit criteria:** player movement and camera feel reliable; no major control blockers.
 
 ## Phase 2 — First environment
-- [ ] Create a compact forest trail and viewpoint.
-- [ ] Add terrain, trees, rocks, and one landmark.
-- [ ] Set up basic lighting and materials.
-- [ ] Add collision and safe world boundaries.
+- [~] Create a compact forest trail and viewpoint. — Village slice with path to the forest gate and Lookout Hill (placeholder geometry).
+- [~] Add terrain, trees, rocks, and one landmark. — Ground plane, ~75 trees, ~28 rocks, 3 landmarks (well, Great Old Oak, forest gate).
+- [~] Set up basic lighting and materials. — One directional light, trilight ambient, linear fog, URP Simple Lit flat materials. Not baked.
+- [~] Add collision and safe world boundaries. — Invisible boundary walls plus fall respawn.
 - [ ] Tune LODs, shadows, and foliage density.
 - [ ] Measure device frame time.
 
 **Exit criteria:** one visually coherent path is explorable at the performance target or has documented optimization issues.
 
 ## Phase 3 — Interaction and collectibles
-- [ ] Define `IInteractable`.
-- [ ] Implement interaction detection and contextual prompt.
+- [~] Define `IInteractable`.
+- [~] Implement interaction detection and contextual prompt. — `PlayerInteractor`, `InteractionPromptView`.
 - [ ] Implement one collectible prefab with stable ID.
 - [ ] Prevent duplicate collection.
 - [ ] Update a visible counter or objective display.
@@ -55,8 +59,8 @@ Mark tasks complete only after implementation and appropriate verification.
 **Exit criteria:** all three missions can be completed in a predictable sequence.
 
 ## Phase 5 — NPCs and world flow
-- [ ] Add at least two interactable NPCs.
-- [ ] Add dialogue UI with short text.
+- [ ] Add at least two interactable NPCs. — 1 of 2 (Mira) plus a readable signpost.
+- [~] Add dialogue UI with short text. — `DialogueView`.
 - [ ] Add the village start point.
 - [ ] Connect village, forest, and mountain trail.
 - [ ] Add one route/landmark unlocked by progress.
