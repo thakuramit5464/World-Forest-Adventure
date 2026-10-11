@@ -163,7 +163,7 @@ Shader "Greenhaven/RiverWater"
                     float ripple2 = Ripples(p2 - float2(0, shiftA * s2) + float2(3.1, 1.7)) * weightA
                                   + Ripples(p2 - float2(0, shiftB * s2) + float2(4.2, 2.9)) * weightB;
                     ripple = ripple * 0.6 + ripple2 * 0.4;
-                    float lines = pow(1.0 - abs(2.0 * ripple2 - 1.0), 8.0);
+                    float lines = pow(1.0 - abs(2.0 * ripple2 - 1.0), 11.0) * 0.75;
                 #else
                     float lines = pow(1.0 - abs(2.0 * ripple - 1.0), 8.0);
                 #endif
