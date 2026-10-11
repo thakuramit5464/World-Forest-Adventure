@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.IO;
 using Greenhaven.CameraRig;
+using Greenhaven.Collectibles;
 using Greenhaven.Interaction;
 using Greenhaven.Player;
 using Greenhaven.UI;
@@ -70,13 +71,17 @@ namespace Greenhaven.Editor
 
             GameObject player = BuildPlayer();
             BuildCamera(player);
-            DialogueView dialogue = BuildHud(player);
+            CollectibleRegistry registry = new GameObject("CollectibleRegistry").AddComponent<CollectibleRegistry>();
+            DialogueView dialogue = BuildHud(player, registry);
             BuildNpc(dialogue);
             BuildSign(dialogue);
+            BuildSupplies(registry);
 
+            int badRefs = ValidateSceneReferences(scene);
             EditorSceneManager.SaveScene(scene, ScenePath);
             AddSceneToBuildSettings(ScenePath);
-            Debug.Log($"Greenhaven: built {ScenePath}. Press Play to explore.");
+            if (badRefs == 0) Debug.Log($"Greenhaven: built {ScenePath}. Press Play to explore.");
+            else Debug.LogError($"Greenhaven: built {ScenePath} with {badRefs} bad reference(s); see errors above.");
         }
 
         // ───────────────────────────── Materials ─────────────────────────────
@@ -456,8 +461,8 @@ namespace Greenhaven.Editor
         const string AdventurerSkinPath = AdventurerFolder + "Textures/adventurerSkin.png";
         const string AdventurerControllerPath = AdventurerFolder + "Adventurer.controller";
         const float AdventurerHeight = 1.75f;
-        // Rotate the model if it does not face +Z after import (check in Play mode).
-        const float AdventurerYawOffset = 0f;
+        // Gameplay forward is +Z; rotate the model to match.
+        const float AdventurerYawOffset = 180f; // the Kenney model faces -Z after import
 
         /// <summary>Instantiates the rigged Kenney adventurer under <paramref name="visual"/>. False if the asset is missing.</summary>
         static bool TryBuildAnimatedAdventurer(Transform visual)
@@ -618,6 +623,43 @@ namespace Greenhaven.Editor
             SetRef(instance.GetComponent<DialogueInteractable>(), "dialogueView", dialogue);
         }
 
+        static void BuildSupplies(CollectibleRegistry registry)
+        {
+            // "The Missing Supplies": two along the forest trail, one rewarding the Lookout Hill jumps.
+            Transform group = Group("Supplies", null);
+            SupplyCrate(group, registry, "supply_01", new Vector3(4.6f, 0f, 19f));
+            SupplyCrate(group, registry, "supply_02", new Vector3(7.6f, 0f, 31f));
+            SupplyCrate(group, registry, "supply_03", new Vector3(23.5f, 2.5f, 19.5f));
+        }
+
+        static void SupplyCrate(Transform parent, CollectibleRegistry registry, string id, Vector3 position)
+        {
+            var root = new GameObject($"Supply_{id}");
+            root.transform.SetParent(parent, false);
+            root.transform.position = position;
+            SphereCollider trigger = root.AddComponent<SphereCollider>();
+            trigger.isTrigger = true; // detectable by the interactor, never blocks movement
+            trigger.center = new Vector3(0f, 0.5f, 0f);
+            trigger.radius = 0.6f;
+
+            Transform visual = Group("Visual", root.transform);
+            visual.localPosition = new Vector3(0f, 0.45f, 0f);
+            LocalPrim(PrimitiveType.Cube, "Crate", visual, Vector3.zero, Vector3.one * 0.6f, "Timber", collider: false);
+            LocalPrim(PrimitiveType.Cube, "BandH", visual, Vector3.zero, new Vector3(0.62f, 0.1f, 0.62f), "FlowerYellow", collider: false);
+            LocalPrim(PrimitiveType.Cube, "BandV", visual, Vector3.zero, new Vector3(0.1f, 0.62f, 0.62f), "FlowerYellow", collider: false);
+            // Bobbing objects must not be static-batched.
+            foreach (Transform t in root.GetComponentsInChildren<Transform>()) GameObjectUtility.SetStaticEditorFlags(t.gameObject, 0);
+
+            Collectible c = root.AddComponent<Collectible>();
+            var so = new SerializedObject(c);
+            so.FindProperty("collectibleId").stringValue = id;
+            so.FindProperty("itemType").stringValue = "supply";
+            so.FindProperty("displayName").stringValue = "Supply Crate";
+            so.FindProperty("registry").objectReferenceValue = registry;
+            so.FindProperty("visual").objectReferenceValue = visual;
+            so.ApplyModifiedPropertiesWithoutUndo();
+        }
+
         static void BuildSign(DialogueView dialogue)
         {
             Transform sign = new GameObject("Signpost").transform;
@@ -654,7 +696,7 @@ namespace Greenhaven.Editor
 
         // ───────────────────────────── HUD ─────────────────────────────
 
-        static DialogueView BuildHud(GameObject player)
+        static DialogueView BuildHud(GameObject player, CollectibleRegistry registry)
         {
             PlayerInputReader input = player.GetComponent<PlayerInputReader>();
             PlayerInteractor interactor = player.GetComponent<PlayerInteractor>();
@@ -717,6 +759,19 @@ namespace Greenhaven.Editor
             promptBg.color = new Color(0.1f, 0.12f, 0.16f, 0.7f);
             promptBg.raycastTarget = false;
             Text promptText = UiText("Text", prompt, font, 40, TextAnchor.MiddleCenter, Color.white);
+
+            // Collectible counter (top-left).
+            RectTransform counter = UiRect("SupplyCounter", safe, new Vector2(0f, 1f), new Vector2(0f, 1f), new Vector2(230f, -80f), new Vector2(380f, 90f));
+            Image counterBg = counter.gameObject.AddComponent<Image>();
+            counterBg.sprite = rounded;
+            counterBg.type = Image.Type.Sliced;
+            counterBg.color = new Color(0.1f, 0.12f, 0.16f, 0.7f);
+            counterBg.raycastTarget = false;
+            Text counterText = UiText("Text", counter, font, 42, TextAnchor.MiddleCenter, new Color(1f, 0.9f, 0.6f));
+            CollectibleCounterView counterView = canvasGo.AddComponent<CollectibleCounterView>();
+            SetRef(counterView, "registry", registry);
+            SetRef(counterView, "root", counter.gameObject);
+            SetRef(counterView, "counterText", counterText);
 
             InteractionPromptView promptView = canvasGo.AddComponent<InteractionPromptView>();
             SetRef(promptView, "interactor", interactor);
@@ -797,6 +852,36 @@ namespace Greenhaven.Editor
 
         // ───────────────────────────── Helpers ─────────────────────────────
 
+        /// <summary>
+        /// Our scene components must reference scene objects, never prefab/model assets
+        /// (an asset's components never run). Returns the number of offending fields.
+        /// </summary>
+        static int ValidateSceneReferences(Scene scene)
+        {
+            int bad = 0;
+            foreach (GameObject root in scene.GetRootGameObjects())
+            {
+                foreach (MonoBehaviour mb in root.GetComponentsInChildren<MonoBehaviour>(true))
+                {
+                    if (mb == null) continue;
+                    string ns = mb.GetType().Namespace;
+                    if (ns == null || !ns.StartsWith("Greenhaven")) continue;
+                    SerializedProperty it = new SerializedObject(mb).GetIterator();
+                    while (it.NextVisible(true))
+                    {
+                        if (it.propertyType != SerializedPropertyType.ObjectReference) continue;
+                        Object value = it.objectReferenceValue;
+                        if ((value is GameObject || value is Component) && EditorUtility.IsPersistent(value))
+                        {
+                            Debug.LogError($"Greenhaven builder: {mb.GetType().Name}.{it.name} on '{mb.name}' points at asset '{value.name}' instead of a scene object.", mb);
+                            bad++;
+                        }
+                    }
+                }
+            }
+            return bad;
+        }
+
         static Transform Group(string name, Transform parent)
         {
             var go = new GameObject(name);
@@ -854,10 +939,15 @@ namespace Greenhaven.Editor
             foreach (Transform child in go.transform) SetLayerRecursively(child.gameObject, layer);
         }
 
+        /// <summary>
+        /// Saves <paramref name="go"/> as a prefab and links it. Returns the SCENE INSTANCE:
+        /// SaveAsPrefabAssetAndConnect itself returns the asset, which must never be wired into scene references.
+        /// </summary>
         static GameObject SaveAndConnectPrefab(GameObject go, string prefabName)
         {
             string path = $"{PrefabFolder}/{prefabName}.prefab";
-            return PrefabUtility.SaveAsPrefabAssetAndConnect(go, path, InteractionMode.AutomatedAction);
+            PrefabUtility.SaveAsPrefabAssetAndConnect(go, path, InteractionMode.AutomatedAction);
+            return go;
         }
 
         static void SetRef(Object target, string property, Object value)

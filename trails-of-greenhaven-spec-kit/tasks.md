@@ -40,9 +40,9 @@ Legend: `[x]` done and verified · `[~]` implemented and compiles, Play-mode/dev
 ## Phase 3 — Interaction and collectibles
 - [~] Define `IInteractable`.
 - [~] Implement interaction detection and contextual prompt. — `PlayerInteractor`, `InteractionPromptView`.
-- [ ] Implement one collectible prefab with stable ID.
-- [ ] Prevent duplicate collection.
-- [ ] Update a visible counter or objective display.
+- [~] Implement one collectible prefab with stable ID. — `Collectible` + `CollectibleRegistry`; 3 supply crates (`supply_01..03`) placed by the builder.
+- [~] Prevent duplicate collection. — `CollectedItems` rejects duplicate IDs (EditMode tests); duplicate scene IDs are logged as errors.
+- [~] Update a visible counter or objective display. — `CollectibleCounterView`: "Supplies n/3", top left.
 - [ ] Test interaction range and repeated taps.
 
 **Exit criteria:** player can reliably discover and collect items on touch devices.

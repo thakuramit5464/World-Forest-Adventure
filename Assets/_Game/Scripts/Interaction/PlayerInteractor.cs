@@ -88,7 +88,9 @@ namespace Greenhaven.Interaction
             // Revalidate: the target may have moved, been disabled, or changed state since the last scan.
             bool inRange = InteractionScoring.Score(transform.position, transform.forward, target.InteractionPoint, range * 1.25f)
                            < float.PositiveInfinity;
-            if (inRange && target.CanInteract(gameObject)) target.Interact(gameObject);
+            if (!inRange || !target.CanInteract(gameObject)) return;
+            target.Interact(gameObject);
+            nextScanTime = 0f; // rescan next frame: the target may now be collected or changed
         }
 
         void OnDrawGizmosSelected()

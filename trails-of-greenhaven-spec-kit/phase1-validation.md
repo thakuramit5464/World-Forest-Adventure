@@ -37,7 +37,9 @@ In the Editor you can click and drag the on-screen joystick and buttons with the
 | 8 | Walk to the signpost, then to Mira (by the well) | "Read Signpost" or "Talk to Mira" appears and the Interact button brightens |
 | 9 | Interact with Mira repeatedly | Shows 3 lines, then closes. The prompt reads "Continue" while the dialogue is open |
 | 10 | Walk away mid-dialogue | Dialogue closes |
-| 11 | Window ▸ General ▸ Test Runner ▸ EditMode ▸ Run All | 14 test cases pass (`MovementMathTests` 9, `InteractionScoringTests` 5) |
+| 11 | Window ▸ General ▸ Test Runner ▸ EditMode ▸ Run All | 22 test cases pass (`MovementMathTests` 9, `InteractionScoringTests` 5, `CollectedItemsTests` 8) |
+| 12 | Find the 3 supply crates (2 along the north trail, 1 on top of Lookout Hill) | "Pick up Supply Crate" appears. Picking one up hides it, and the counter reads "Supplies 1/3" and pops |
+| 13 | Mash Interact while standing on a crate | Counts once only. The prompt moves to the next nearby target or disappears |
 
 ## 4. Performance notes and risks (unmeasured)
 
