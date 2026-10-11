@@ -52,6 +52,22 @@ namespace Greenhaven.Player
         public event Action Jumped;
         public event Action Landed;
 
+        Vector3 faceDirection;
+        float faceTimer;
+
+        /// <summary>
+        /// Turn toward a world point (e.g. an interaction target) while the player is not steering.
+        /// Visual/feel only: never moves the character.
+        /// </summary>
+        public void FaceTowards(Vector3 worldPoint, float seconds = 0.6f)
+        {
+            Vector3 d = worldPoint - transform.position;
+            d.y = 0f;
+            if (d.sqrMagnitude < 0.01f) return;
+            faceDirection = d.normalized;
+            faceTimer = seconds;
+        }
+
         void Awake()
         {
             controller = GetComponent<CharacterController>();
@@ -110,8 +126,15 @@ namespace Greenhaven.Player
 
             if (amount > 0.01f)
             {
+                faceTimer = 0f; // steering always wins over an interaction turn
                 Quaternion facing = Quaternion.LookRotation(direction, Vector3.up);
                 transform.rotation = Quaternion.RotateTowards(transform.rotation, facing, turnSpeed * dt);
+            }
+            else if (faceTimer > 0f)
+            {
+                faceTimer -= dt;
+                Quaternion facing = Quaternion.LookRotation(faceDirection, Vector3.up);
+                transform.rotation = Quaternion.RotateTowards(transform.rotation, facing, turnSpeed * 0.6f * dt);
             }
         }
 

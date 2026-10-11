@@ -19,6 +19,7 @@ namespace Greenhaven.Interaction
         float scanInterval = 0.1f;
 
         readonly Collider[] candidates = new Collider[MaxCandidates];
+        PlayerMotor motor;
         float nextScanTime;
 
         public IInteractable CurrentTarget { get; private set; }
@@ -32,6 +33,7 @@ namespace Greenhaven.Interaction
         void Awake()
         {
             if (input == null) TryGetComponent(out input);
+            TryGetComponent(out motor); // optional: turns the hero toward what it interacts with
             if (input == null)
                 Debug.LogWarning($"{nameof(PlayerInteractor)} on '{name}' has no {nameof(PlayerInputReader)}; Interact will not fire.", this);
         }
@@ -94,6 +96,7 @@ namespace Greenhaven.Interaction
             if (!inRange || !target.CanInteract(gameObject)) return;
             target.Interact(gameObject);
             Interacted?.Invoke(target);
+            if (motor != null) motor.FaceTowards(target.InteractionPoint);
             nextScanTime = 0f; // rescan next frame: the target may now be collected or changed
         }
 

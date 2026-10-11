@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using Greenhaven.Editor.AssetGenerator;
 using NUnit.Framework;
 using UnityEngine;
@@ -131,12 +132,43 @@ namespace Greenhaven.Tests
                 Assert.That(hero.Avatar.isHuman, Is.True, "avatar humanoid");
                 Assert.That(hero.Mesh.bounds.min.y, Is.EqualTo(0f).Within(0.02f), "feet on the ground");
                 Assert.That(hero.Mesh.bounds.size.y, Is.EqualTo(HeroGenerator.Height).Within(0.06f), "height");
+                Assert.That(hero.LeftEye, Is.Not.Null, "eye bone for blinking");
+                Assert.That(hero.Backpack, Is.Not.Null, "backpack bone for sway");
+                Assert.That(hero.Renderer.bones.Length, Is.EqualTo(HeroGenerator.BoneCount));
             }
             finally
             {
                 Object.DestroyImmediate(hero.Root);
                 Object.DestroyImmediate(hero.Mesh);
                 Object.DestroyImmediate(hero.Avatar);
+            }
+        }
+
+        [Test]
+        public void AdventurerModel_RigsIntoAValidHumanoid()
+        {
+            string folder = AdventurerModelRig.SourceFolder();
+            if (folder == null) Assert.Ignore("Greenhaven_Adventurer.obj is not in the project; nothing to test.");
+            HeroGenerator.Result r = AdventurerModelRig.BuildInMemory(folder, out _, out _);
+            try
+            {
+                var problems = new List<string>();
+                Assert.That(MeshValidator.Validate(r.Mesh, problems), Is.True, string.Join("\n", problems));
+                Assert.That(r.Mesh.boneWeights.Length, Is.EqualTo(r.Mesh.vertexCount));
+                Assert.That(r.Avatar.isValid && r.Avatar.isHuman, Is.True, "valid Humanoid avatar");
+                Assert.That(r.Mesh.bounds.min.y, Is.EqualTo(0f).Within(0.03f), "feet on the ground");
+                Assert.That(r.Mesh.bounds.size.y, Is.EqualTo(1.65f).Within(0.05f), "scaled to game height");
+                // Arms straightened: hands far out to the sides at shoulder height (T-pose).
+                Transform hand = r.Renderer.bones.First(b => b.name == "RightHand");
+                Transform upper = r.Renderer.bones.First(b => b.name == "RightUpperArm");
+                Assert.That(hand.position.x, Is.GreaterThan(upper.position.x + 0.3f), "arm points outwards");
+                Assert.That(Mathf.Abs(hand.position.y - upper.position.y), Is.LessThan(0.02f), "arm is horizontal");
+            }
+            finally
+            {
+                Object.DestroyImmediate(r.Root);
+                Object.DestroyImmediate(r.Mesh);
+                Object.DestroyImmediate(r.Avatar);
             }
         }
 

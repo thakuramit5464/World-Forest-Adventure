@@ -62,8 +62,15 @@ namespace Greenhaven.Editor.AssetGenerator
             window.minSize = new Vector2(380f, 600f);
         }
 
+        [MenuItem("Greenhaven/Rig Greenhaven Adventurer Model", priority = 19)]
+        static void RigAdventurerMenu() => Report("Rig Greenhaven Adventurer Model", AdventurerModelRig.Rig());
+
         [MenuItem("Greenhaven/Generate Hero", priority = 21)]
         static void GenerateHeroMenu() => Report("Generate Hero", HeroGenerator.Generate(GeneratorPrefs.Settings.Seed));
+
+        [MenuItem("Greenhaven/Create Character Test Scene", priority = 23)]
+        static void CharacterTestMenu() =>
+            Report("Create Character Test Scene", Greenhaven.Editor.CharacterTest.CharacterTestSceneBuilder.Build(GeneratorPrefs.Settings.Seed));
 
         [MenuItem("Greenhaven/Generate Village Assets", priority = 22)]
         static void GenerateVillageMenu() => Report("Generate Village Assets", GenerateDefaults(GeneratorPrefs.Settings));
@@ -86,6 +93,26 @@ namespace Greenhaven.Editor.AssetGenerator
             }
             if (UnityEditor.SceneManagement.EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo())
                 UnityEditor.SceneManagement.EditorSceneManager.OpenScene(VillageSceneBuilder.ScenePath);
+        }
+
+        [MenuItem("Greenhaven/Make Village the Build Start Scene", priority = 42)]
+        static void VillageAsStartSceneMenu()
+        {
+            if (!System.IO.File.Exists(VillageSceneBuilder.ScenePath))
+            {
+                EditorUtility.DisplayDialog("Build start scene", "Create the village scene first (Greenhaven ▸ Create Village Scene).", "OK");
+                return;
+            }
+            // Village first (it launches), every other listed scene kept; the Unity template scene is unticked.
+            var scenes = new List<EditorBuildSettingsScene> { new EditorBuildSettingsScene(VillageSceneBuilder.ScenePath, true) };
+            foreach (EditorBuildSettingsScene s in EditorBuildSettings.scenes)
+            {
+                if (s.path == VillageSceneBuilder.ScenePath) continue;
+                scenes.Add(new EditorBuildSettingsScene(s.path, s.enabled && !s.path.EndsWith("Scenes/SampleScene.unity")));
+            }
+            EditorBuildSettings.scenes = scenes.ToArray();
+            string list = string.Join("\n", scenes.Select((scene, i) => $"{i}. {(scene.enabled ? "✔" : "✘")} {scene.path}"));
+            Report("Build start scene", $"Build scene list:\n{list}\n\nBuild with File ▸ Build Profiles ▸ Windows ▸ Build.");
         }
 
         [MenuItem("Greenhaven/Validate Generated Assets", priority = 60)]

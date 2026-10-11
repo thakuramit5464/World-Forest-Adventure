@@ -111,6 +111,10 @@ Legend: `[x]` done and verified · `[~]` implemented and compiles, Play-mode/dev
 - [~] `GreenhavenVillage` scene: square, well, 6 buildings, door paths, gardens, stream and bridge, north exit, boundaries, vegetation.
 - [~] Menus: Generate Hero, Generate Village Assets, Create Village Scene, Validate Generated Assets.
 - [ ] Owner play-test of the village (movement, camera, collisions, readable signs).
+- [~] Hero v2 visual polish (proportions, face, layered hair, clothing details), with v1 kept as backup.
+- [~] Expressive layer: blinking, look-at toward interaction targets, backpack sway, turn-to-target on interact.
+- [~] Character Test scene for inspection before the main scenes use v2.
+- [ ] Owner review of hero v2 in the Character Test scene, then rebuild the village/region to adopt it.
 - [ ] Move Mira, Rowan and the quests into the village layout (currently only in `GreenhavenRegion`).
 - [ ] Device profiling of the village scene.
 - [ ] Decide whether generated assets replace or complement the Quaternius props in `GreenhavenRegion` (needs owner approval before changing the main scene).

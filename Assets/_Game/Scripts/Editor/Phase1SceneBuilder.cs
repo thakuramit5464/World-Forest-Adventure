@@ -512,7 +512,7 @@ namespace Greenhaven.Editor
         /// (Greenhaven ▸ Generate Hero), then the Kenney character, then a primitive placeholder.
         /// Requires <see cref="CreateMaterials"/> to have run (for the placeholder).
         /// </summary>
-        internal static GameObject BuildPlayer(Vector3 spawn)
+        internal static GameObject BuildPlayer(Vector3 spawn, string prefabName = "Player", GameObject heroOverride = null)
         {
             var player = new GameObject("Player");
             player.transform.SetPositionAndRotation(spawn, Quaternion.identity);
@@ -530,7 +530,10 @@ namespace Greenhaven.Editor
             player.AddComponent<PlayerInteractor>();
 
             Transform visual = Group("Visual", player.transform);
-            GameObject hero = HeroGenerator.FindPrefab(GeneratorPrefs.Settings.Seed);
+            // Preference: explicit override → rigged Greenhaven Adventurer model → generated hero (v2, then v1).
+            GameObject hero = heroOverride;
+            if (hero == null) hero = AdventurerModelRig.FindPrefab();
+            if (hero == null) hero = HeroGenerator.FindPrefab(GeneratorPrefs.Settings.Seed);
             if (hero != null && GreenhavenArt.AnimationLibraryAvailable)
             {
                 var heroMotor = new SerializedObject(player.GetComponent<PlayerMotor>());
@@ -541,7 +544,7 @@ namespace Greenhaven.Editor
                 heroAnimator.applyRootMotion = false;
                 player.AddComponent<PlayerAnimator>();
                 SetLayerRecursively(player, IgnoreRaycastLayer);
-                return SaveAndConnectPrefab(player, "Player");
+                return SaveAndConnectPrefab(player, prefabName);
             }
             if (GreenhavenArt.CharacterAvailable)
             {
@@ -551,7 +554,7 @@ namespace Greenhaven.Editor
                 GreenhavenArt.BuildCharacter(visual, "adventurerSkin", GreenhavenArt.PlayerController(walk, run));
                 player.AddComponent<PlayerAnimator>();
                 SetLayerRecursively(player, IgnoreRaycastLayer);
-                return SaveAndConnectPrefab(player, "Player");
+                return SaveAndConnectPrefab(player, prefabName);
             }
 
             // Fallback placeholder adventurer: readable silhouette with a backpack so facing is obvious.
@@ -564,7 +567,7 @@ namespace Greenhaven.Editor
             LocalPrim(PrimitiveType.Cube, "Bedroll", visual, new Vector3(0f, 1.28f, -0.34f), new Vector3(0.5f, 0.14f, 0.18f), "RoofRed", collider: false);
 
             SetLayerRecursively(player, IgnoreRaycastLayer);
-            return SaveAndConnectPrefab(player, "Player");
+            return SaveAndConnectPrefab(player, prefabName);
         }
 
         static void BuildNpcs(DialogueView dialogue, QuestManager quests, QuestDefinition supplies, QuestDefinition request)

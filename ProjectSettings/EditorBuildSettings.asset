@@ -6,9 +6,12 @@ EditorBuildSettings:
   serializedVersion: 2
   m_Scenes:
   - enabled: 1
+    path: Assets/_Game/Scenes/GreenhavenVillage.unity
+    guid: c69936971a5e7aa44a6f36c4af07c693
+  - enabled: 1
     path: Assets/_Game/Scenes/GreenhavenRegion.unity
     guid: 8bf505f75c6a8e2458c24aac3282e0b1
-  - enabled: 1
+  - enabled: 0
     path: Assets/Scenes/SampleScene.unity
     guid: 99c9720ab356a0642a771bea13969a05
   m_configObjects:

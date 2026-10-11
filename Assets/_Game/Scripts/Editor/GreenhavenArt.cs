@@ -362,6 +362,11 @@ namespace Greenhaven.Editor
             toInteract.canTransitionToSelf = false;
             Transition(interact, empty, 0.2f, 0.85f);
 
+            // IK pass on the base layer enables head/eye look-at (HeroSecondaryMotion.OnAnimatorIK).
+            AnimatorControllerLayer[] layers = c.layers; // copy: edit, then assign back
+            layers[0].iKPass = true;
+            c.layers = layers;
+
             AssetDatabase.SaveAssets();
             return c;
         }
