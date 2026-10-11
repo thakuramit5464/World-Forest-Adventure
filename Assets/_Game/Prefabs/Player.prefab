@@ -91,7 +91,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: Greenhaven::Greenhaven.Player.PlayerMotor
   input: {fileID: 0}
   cameraTransform: {fileID: 0}
-  walkSpeed: 2.6
+  walkSpeed: 2
   runSpeed: 5.5
   acceleration: 25
   airControl: 0.5
@@ -134,10 +134,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Greenhaven::Greenhaven.Player.PlayerAnimator
   motor: {fileID: 0}
+  interactor: {fileID: 0}
   animator: {fileID: 0}
-  runClipSpeed: 5
-  minRunPlayback: 0.55
-  airborneDelay: 0.12
+  airborneDelay: 0.15
   speedDamping: 0.08
 --- !u!1 &8747440177315083457
 GameObject:
@@ -302,7 +301,7 @@ PrefabInstance:
     - target: {fileID: -2049929814205202405, guid: cd1da3da4fcb8904cabc1eb86817adb7, type: 3}
       propertyPath: 'm_Materials.Array.data[0]'
       value: 
-      objectReference: {fileID: 2100000, guid: 1c6531b2fea26f14dbc0d004ed6336b7, type: 2}
+      objectReference: {fileID: 2100000, guid: 0f940b2aeaf54124ab441385e4a101e8, type: 2}
     - target: {fileID: -1946453301020861864, guid: cd1da3da4fcb8904cabc1eb86817adb7, type: 3}
       propertyPath: m_Layer
       value: 2
@@ -365,7 +364,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 919132149155446097, guid: cd1da3da4fcb8904cabc1eb86817adb7, type: 3}
       propertyPath: m_Name
-      value: AdventurerModel
+      value: CharacterModel
       objectReference: {fileID: 0}
     - target: {fileID: 919132149155446097, guid: cd1da3da4fcb8904cabc1eb86817adb7, type: 3}
       propertyPath: m_Layer
@@ -390,6 +389,14 @@ PrefabInstance:
     - target: {fileID: 2479928173230292028, guid: cd1da3da4fcb8904cabc1eb86817adb7, type: 3}
       propertyPath: m_Layer
       value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: 2578092655996727444, guid: cd1da3da4fcb8904cabc1eb86817adb7, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0.030971779
+      objectReference: {fileID: 0}
+    - target: {fileID: 2578092655996727444, guid: cd1da3da4fcb8904cabc1eb86817adb7, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: -0.0008921604
       objectReference: {fileID: 0}
     - target: {fileID: 3030381060971222984, guid: cd1da3da4fcb8904cabc1eb86817adb7, type: 3}
       propertyPath: m_Layer
@@ -442,7 +449,11 @@ PrefabInstance:
     - target: {fileID: 5866666021909216657, guid: cd1da3da4fcb8904cabc1eb86817adb7, type: 3}
       propertyPath: m_Controller
       value: 
-      objectReference: {fileID: 9100000, guid: f9147bc608d1dea4c8c6dabfb180ceab, type: 2}
+      objectReference: {fileID: 9100000, guid: 8627b78ddf8e5a146b6558b76180867c, type: 2}
+    - target: {fileID: 5866666021909216657, guid: cd1da3da4fcb8904cabc1eb86817adb7, type: 3}
+      propertyPath: m_ApplyRootMotion
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 6371936846906434246, guid: cd1da3da4fcb8904cabc1eb86817adb7, type: 3}
       propertyPath: m_Layer
       value: 2
@@ -486,6 +497,14 @@ PrefabInstance:
     - target: {fileID: 8559900204587077418, guid: cd1da3da4fcb8904cabc1eb86817adb7, type: 3}
       propertyPath: m_Layer
       value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: 8800304848960209280, guid: cd1da3da4fcb8904cabc1eb86817adb7, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0.00073369127
+      objectReference: {fileID: 0}
+    - target: {fileID: 8800304848960209280, guid: cd1da3da4fcb8904cabc1eb86817adb7, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: -0.04707186
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
