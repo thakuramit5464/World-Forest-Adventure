@@ -1,0 +1,45 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f9a8d5182e3aff748a033f3b631e3615, type: 3}
+  m_Name: WildlifeSpecies_Rabbit
+  m_EditorClassIdentifier: Greenhaven::Greenhaven.Wildlife.WildlifeSpecies
+  kind: 2
+  walkSpeed: 0.9
+  trotSpeed: 1.8
+  fleeSpeed: 5.5
+  turnSpeed: 220
+  acceleration: 5
+  wanderRadius: 5
+  maxSlope: 32
+  bodyRadius: 0.14
+  detectDistance: 9
+  fleeDistance: 4
+  personalSpace: 2
+  calmDistance: 12
+  runningPlayerMultiplier: 1.5
+  wanderChance: 0.45
+  grazeChance: 0.4
+  idleSeconds: {x: 2, y: 5}
+  grazeSeconds: {x: 4, y: 9}
+  curiosity: 0.1
+  boldnessRange: {x: 0.05, y: 0.4}
+  strideLength: 0.45
+  legSwingDegrees: 32
+  bodyBob: 0
+  grazeHeadPitch: 25
+  hopHeight: 0.12
+  flapRate: 12
+  flightSpeed: 5
+  flightHeight: 3
+  calls: []
+  callVolume: 0.35
+  callInterval: {x: 14, y: 35}

@@ -1,0 +1,45 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f9a8d5182e3aff748a033f3b631e3615, type: 3}
+  m_Name: WildlifeSpecies_Bird
+  m_EditorClassIdentifier: Greenhaven::Greenhaven.Wildlife.WildlifeSpecies
+  kind: 4
+  walkSpeed: 0.5
+  trotSpeed: 0.8
+  fleeSpeed: 0.8
+  turnSpeed: 220
+  acceleration: 5
+  wanderRadius: 3
+  maxSlope: 32
+  bodyRadius: 0.08
+  detectDistance: 7
+  fleeDistance: 5
+  personalSpace: 3
+  calmDistance: 10
+  runningPlayerMultiplier: 1.5
+  wanderChance: 0.3
+  grazeChance: 0.45
+  idleSeconds: {x: 2, y: 5}
+  grazeSeconds: {x: 4, y: 9}
+  curiosity: 0
+  boldnessRange: {x: 0.1, y: 0.5}
+  strideLength: 0.12
+  legSwingDegrees: 10
+  bodyBob: 0
+  grazeHeadPitch: 60
+  hopHeight: 0
+  flapRate: 12
+  flightSpeed: 5
+  flightHeight: 3
+  calls: []
+  callVolume: 0.35
+  callInterval: {x: 8, y: 20}

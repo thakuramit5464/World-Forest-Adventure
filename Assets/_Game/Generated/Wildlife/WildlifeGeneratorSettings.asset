@@ -1,0 +1,45 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ef3bfbaad64ea874897d59af9177c4cb, type: 3}
+  m_Name: WildlifeGeneratorSettings
+  m_EditorClassIdentifier: Greenhaven.Editor::Greenhaven.Editor.Wildlife.WildlifeGeneratorSettings
+  seed: 1234
+  sizeVariation: 0.08
+  colorVariation: 0.4
+  foxCoat: {r: 0.8784314, g: 0.4, b: 0.16470589, a: 1}
+  cream: {r: 0.9647059, g: 0.92156863, b: 0.827451, a: 1}
+  dark: {r: 0.18039216, g: 0.14117648, b: 0.1254902, a: 1}
+  deerCoat: {r: 0.74509805, g: 0.5411765, b: 0.33333334, a: 1}
+  antler: {r: 0.8862745, g: 0.8117647, b: 0.68235296, a: 1}
+  rabbitCoat: {r: 0.65882355, g: 0.54901963, b: 0.4392157, a: 1}
+  goatCoat: {r: 0.92941177, g: 0.90588236, b: 0.85490197, a: 1}
+  horn: {r: 0.47843137, g: 0.39607844, b: 0.3137255, a: 1}
+  birdBlue: {r: 0.29803923, g: 0.5254902, b: 0.8, a: 1}
+  birdBreast: {r: 0.9411765, g: 0.6392157, b: 0.23529412, a: 1}
+  beak: {r: 0.9490196, g: 0.7137255, b: 0.2509804, a: 1}
+  eyeShine: {r: 1, g: 1, b: 1, a: 1}
+  robinBrown: {r: 0.5411765, g: 0.41568628, b: 0.30588236, a: 1}
+  finchYellow: {r: 0.95686275, g: 0.8117647, b: 0.22745098, a: 1}
+  foxScale: 1.15
+  foxTail: 1
+  deerScale: 1
+  deerLegs: 1
+  rabbitScale: 1.3
+  rabbitEars: 1
+  goatScale: 1
+  goatHorns: 1
+  birdScale: 1.3
+  foxVariants: 2
+  deerVariants: 2
+  rabbitVariants: 2
+  goatVariants: 2
+  birdVariants: 3

@@ -152,3 +152,11 @@ Legend: `[x]` done and verified · `[~]` implemented and compiles, Play-mode/dev
 - [ ] Android profiling of CloudpeakAdventure (triangles in view, batches, LOD culling distances, terrain grid size).
 - [x] Removed the temporary `CloudpeakDiagnostics` editor hook.
 
+## Wildlife
+- [~] Generator: fox, deer, rabbit, goat, bird prefabs (skinned, one shared material, deterministic, configurable). In-memory preview rendered and checked; colours and leg proportions adjusted after the first preview.
+- [~] Procedural animation (gaits, hop, flight, look, graze, ears, tail) and behaviour (idle, wander, graze, look, investigate, flee, return; perch and fly).
+- [~] WildlifeManager: density, quality, staggered updates, distance pause, trail blocking, pooled optional audio, F4 debug.
+- [~] Placement: Populate Current Scene / Clear Generated Wildlife; Cloudpeak habitats; Wildlife Demo scene; README; EditMode tests.
+- [ ] Owner Play Mode check in the Wildlife Demo and Cloudpeak (fox wander and flee, deer graze and react, rabbit hops, goat on rocks, birds perch and fly).
+- [ ] Android profiling with about 20 animals; tune Density and Quality defaults.
+- [ ] Optional CC0 animal calls (record in ASSET_CREDITS.md).

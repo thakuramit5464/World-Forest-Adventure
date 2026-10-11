@@ -108,6 +108,15 @@ namespace Greenhaven.Editor.Cloudpeak
             BuildMountainDetails(mountain);
             BuildVegetation(vegetation);
 
+            // Wildlife (if generated): deer in the glade, rabbits and foxes in the forest, goats on the ledges, birds on perches.
+            if (Wildlife.WildlifeGenerator.Kinds.Any(k => Wildlife.WildlifeGenerator.VariantsOnDisk(k) > 0))
+            {
+                Physics.SyncTransforms();
+                log.AppendLine(Wildlife.WildlifePlacement.Populate(Wildlife.WildlifePlacement.Counts.Default, Mathf.Clamp(world.Settings.VegetationDensity, 0.3f, 1.5f),
+                    world.Settings.Seed, world).Split('\n')[0]);
+            }
+            else log.AppendLine("Wildlife: none generated yet (Greenhaven ▸ Wildlife ▸ Generate Wildlife, then rebuild or Populate Current Scene).");
+
             // 7. Environmental motion: drifting leaves, optional ambience, F2 panel.
             LeafDrift leaves = AmbientMotionSetup.AddLeafDrift();
             AmbienceController ambience = AmbientMotionSetup.AddAmbience();

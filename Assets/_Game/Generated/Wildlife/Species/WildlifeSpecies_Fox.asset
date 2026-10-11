@@ -1,0 +1,45 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f9a8d5182e3aff748a033f3b631e3615, type: 3}
+  m_Name: WildlifeSpecies_Fox
+  m_EditorClassIdentifier: Greenhaven::Greenhaven.Wildlife.WildlifeSpecies
+  kind: 0
+  walkSpeed: 1.1
+  trotSpeed: 2.6
+  fleeSpeed: 6.5
+  turnSpeed: 220
+  acceleration: 5
+  wanderRadius: 12
+  maxSlope: 32
+  bodyRadius: 0.22
+  detectDistance: 15
+  fleeDistance: 6
+  personalSpace: 3
+  calmDistance: 20
+  runningPlayerMultiplier: 1.5
+  wanderChance: 0.55
+  grazeChance: 0.25
+  idleSeconds: {x: 2, y: 5}
+  grazeSeconds: {x: 4, y: 9}
+  curiosity: 0.35
+  boldnessRange: {x: 0.25, y: 0.65}
+  strideLength: 0.62
+  legSwingDegrees: 28
+  bodyBob: 0.012
+  grazeHeadPitch: 80
+  hopHeight: 0
+  flapRate: 12
+  flightSpeed: 5
+  flightHeight: 3
+  calls: []
+  callVolume: 0.35
+  callInterval: {x: 14, y: 35}
