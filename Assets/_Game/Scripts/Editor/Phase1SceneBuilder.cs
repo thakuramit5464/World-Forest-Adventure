@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.IO;
 using Greenhaven.CameraRig;
 using Greenhaven.Collectibles;
+using Greenhaven.Core;
 using Greenhaven.Interaction;
 using Greenhaven.Player;
 using Greenhaven.UI;
@@ -55,6 +56,7 @@ namespace Greenhaven.Editor
             EnsureFolder(PrefabFolder);
             EnsureFolder(GameRoot + "/Scenes");
             CreateMaterials();
+            GreenhavenArt.PrepareImports();
 
             Scene scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
 
@@ -65,7 +67,17 @@ namespace Greenhaven.Editor
             BuildVillage(env);
             BuildLandmarks(env);
             BuildJumpCourse(env);
-            BuildScatter(env);
+            if (GreenhavenArt.NatureAvailable)
+            {
+                GreenhavenArt.BuildNature(env, IsClearForScatter, PathDistance);
+                // Stepping stones from the plaza toward Lookout Hill.
+                GreenhavenArt.SteppingStones(env, new Vector3(8f, 0f, 9f), new Vector3(12.5f, 0f, 18f), 8, 7);
+            }
+            else
+            {
+                BuildScatter(env);
+            }
+            BuildFarm(env);
             BuildBackdrop(env);
             BuildBoundaries(env);
 
@@ -73,7 +85,7 @@ namespace Greenhaven.Editor
             BuildCamera(player);
             CollectibleRegistry registry = new GameObject("CollectibleRegistry").AddComponent<CollectibleRegistry>();
             DialogueView dialogue = BuildHud(player, registry);
-            BuildNpc(dialogue);
+            BuildNpcs(dialogue);
             BuildSign(dialogue);
             BuildSupplies(registry);
 
@@ -210,9 +222,18 @@ namespace Greenhaven.Editor
             House(village, "Elder's House", new Vector3(-8.5f, 0f, 15f), 135f, "RoofOrange");
 
             // Flower beds by the doors.
-            Flowers(village, new Vector3(-8f, 0f, 0f), 5, 1);
-            Flowers(village, new Vector3(8.5f, 0f, 8f), 5, 2);
-            Flowers(village, new Vector3(-5.5f, 0f, 12.5f), 4, 3);
+            if (GreenhavenArt.NatureAvailable)
+            {
+                GreenhavenArt.FlowerBed(village, new Vector3(-8f, 0f, 0f), 1);
+                GreenhavenArt.FlowerBed(village, new Vector3(8.5f, 0f, 8f), 2);
+                GreenhavenArt.FlowerBed(village, new Vector3(-5.5f, 0f, 13f), 3);
+            }
+            else
+            {
+                Flowers(village, new Vector3(-8f, 0f, 0f), 5, 1);
+                Flowers(village, new Vector3(8.5f, 0f, 8f), 5, 2);
+                Flowers(village, new Vector3(-5.5f, 0f, 12.5f), 4, 3);
+            }
 
             // Fence along the south edge of the plaza.
             for (int i = 0; i < 6; i++)
@@ -265,10 +286,8 @@ namespace Greenhaven.Editor
             // 2. Great Old Oak (west, visible from the plaza).
             Transform oak = Group("Great Old Oak", landmarks);
             oak.position = new Vector3(-20f, 0f, 30f);
-            LocalPrim(PrimitiveType.Cylinder, "Trunk", oak, new Vector3(0f, 4f, 0f), new Vector3(2.2f, 4f, 2.2f), "Trunk");
-            LocalPrim(PrimitiveType.Sphere, "Canopy1", oak, new Vector3(0f, 9.5f, 0f), new Vector3(10f, 7f, 10f), "Leaf3", collider: false);
-            LocalPrim(PrimitiveType.Sphere, "Canopy2", oak, new Vector3(3f, 8f, 2f), new Vector3(6f, 5f, 6f), "Leaf1", collider: false);
-            LocalPrim(PrimitiveType.Sphere, "Canopy3", oak, new Vector3(-3f, 8.5f, -1.5f), new Vector3(6f, 5f, 6f), "Leaf1", collider: false);
+            if (!GreenhavenArt.NatureAvailable || !GreenhavenArt.LandmarkTree(oak, oak.position, 13f))
+                BuildPrimitiveOak(oak);
 
             // 3. Whispering Forest gate (end of the path, north).
             Transform gate = Group("Whispering Forest Gate", landmarks);
@@ -277,6 +296,55 @@ namespace Greenhaven.Editor
             LocalPrim(PrimitiveType.Cube, "PillarR", gate, new Vector3(2.6f, 2.5f, 0f), new Vector3(1f, 5f, 1f), "StoneWarm");
             LocalPrim(PrimitiveType.Cube, "Lintel", gate, new Vector3(0f, 5.3f, 0f), new Vector3(7f, 0.8f, 1.3f), "StoneWarm");
             LocalPrim(PrimitiveType.Sphere, "Moss", gate, new Vector3(-1.5f, 5.8f, 0f), new Vector3(2f, 0.6f, 1.4f), "Leaf2", collider: false);
+        }
+
+        static void BuildPrimitiveOak(Transform oak)
+        {
+            LocalPrim(PrimitiveType.Cylinder, "Trunk", oak, new Vector3(0f, 4f, 0f), new Vector3(2.2f, 4f, 2.2f), "Trunk");
+            LocalPrim(PrimitiveType.Sphere, "Canopy1", oak, new Vector3(0f, 9.5f, 0f), new Vector3(10f, 7f, 10f), "Leaf3", collider: false);
+            LocalPrim(PrimitiveType.Sphere, "Canopy2", oak, new Vector3(3f, 8f, 2f), new Vector3(6f, 5f, 6f), "Leaf1", collider: false);
+            LocalPrim(PrimitiveType.Sphere, "Canopy3", oak, new Vector3(-3f, 8.5f, -1.5f), new Vector3(6f, 5f, 6f), "Leaf1", collider: false);
+        }
+
+        // Farm pen (east of the plaza) and a meadow (west) for the animals.
+        static readonly Vector3 PenCenter = new Vector3(17f, 0f, -4f);
+        static readonly Vector2 PenHalfSize = new Vector2(4f, 3f);
+        static readonly Vector3 MeadowCenter = new Vector3(-28f, 0f, 6f);
+        const float MeadowRadius = 7f;
+
+        static void BuildFarm(Transform env)
+        {
+            if (!GreenhavenArt.AnimalsAvailable) return;
+            Transform farm = Group("Farm", env);
+
+            // Fence around the pen, with a gap on the plaza (west) side.
+            Transform fence = Group("PenFence", farm);
+            float x0 = PenCenter.x - PenHalfSize.x, x1 = PenCenter.x + PenHalfSize.x;
+            float z0 = PenCenter.z - PenHalfSize.y, z1 = PenCenter.z + PenHalfSize.y;
+            void Rail(Vector3 a, Vector3 b)
+            {
+                Vector3 mid = (a + b) * 0.5f;
+                float len = Vector3.Distance(a, b);
+                Prim(PrimitiveType.Cube, "Rail", fence, mid + Vector3.up * 0.55f, new Vector3(0.1f, 0.9f, len), "Timber",
+                    rotation: Quaternion.LookRotation(b - a));
+                for (float t = 0f; t <= len + 0.01f; t += 2f)
+                    Prim(PrimitiveType.Cube, "Post", fence, Vector3.Lerp(a, b, t / len) + Vector3.up * 0.5f, new Vector3(0.15f, 1f, 0.15f), "Timber", collider: false);
+            }
+            Rail(new Vector3(x0, 0f, z0), new Vector3(x1, 0f, z0));
+            Rail(new Vector3(x1, 0f, z0), new Vector3(x1, 0f, z1));
+            Rail(new Vector3(x1, 0f, z1), new Vector3(x0, 0f, z1));
+            Rail(new Vector3(x0, 0f, z1), new Vector3(x0, 0f, PenCenter.z + 0.8f));
+            Rail(new Vector3(x0, 0f, PenCenter.z - 0.8f), new Vector3(x0, 0f, z0));
+
+            GreenhavenArt.Animal(farm, "Sheep", PenCenter + new Vector3(-1.5f, 0f, 1.2f), 30f, 1.0f);
+            GreenhavenArt.Animal(farm, "Sheep", PenCenter + new Vector3(0.5f, 0f, 1.8f), 160f, 0.95f);
+            GreenhavenArt.Animal(farm, "Sheep", PenCenter + new Vector3(2.2f, 0f, 0.4f), 250f, 1.05f);
+            GreenhavenArt.Animal(farm, "Pig", PenCenter + new Vector3(-1f, 0f, -1.5f), 90f, 0.8f);
+            GreenhavenArt.Animal(farm, "Pig", PenCenter + new Vector3(1.8f, 0f, -1.6f), 300f, 0.75f);
+
+            GreenhavenArt.Animal(farm, "Pug", new Vector3(-2.4f, 0f, 6.2f), 140f, 0.45f); // napping by the well
+            GreenhavenArt.Animal(farm, "Cow", MeadowCenter + new Vector3(-1.5f, 0f, 0f), 60f, 1.6f);
+            GreenhavenArt.Animal(farm, "Horse", MeadowCenter + new Vector3(2.5f, 0f, 2f), 210f, 1.9f);
         }
 
         static void BuildJumpCourse(Transform env)
@@ -347,12 +415,24 @@ namespace Greenhaven.Editor
             if (new Vector2(p.x + 20f, p.z - 30f).magnitude < 7f + margin) return false;
             if (new Vector2(p.x - 4f, p.z - 46f).magnitude < 5f + margin) return false;
             if (p.x > 10f && p.x < 27f && p.z > 15f && p.z < 30f) return false;
+            // Farm pen, meadow and the elder's bench.
+            if (Mathf.Abs(p.x - PenCenter.x) < PenHalfSize.x + 1f + margin && Mathf.Abs(p.z - PenCenter.z) < PenHalfSize.y + 1f + margin) return false;
+            if (new Vector2(p.x - MeadowCenter.x, p.z - MeadowCenter.z).magnitude < MeadowRadius + margin) return false;
             // Path corridor.
             for (int i = 0; i < PathPoints.Length - 1; i++)
             {
                 if (DistanceToSegment(new Vector2(p.x, p.z), PathPoints[i], PathPoints[i + 1]) < 1.5f + margin) return false;
             }
             return true;
+        }
+
+        /// <summary>Planar distance from <paramref name="p"/> to the trail centre line.</summary>
+        static float PathDistance(Vector3 p)
+        {
+            float best = float.MaxValue;
+            for (int i = 0; i < PathPoints.Length - 1; i++)
+                best = Mathf.Min(best, DistanceToSegment(new Vector2(p.x, p.z), PathPoints[i], PathPoints[i + 1]));
+            return best;
         }
 
         static float DistanceToSegment(Vector2 p, Vector2 a, Vector2 b)
@@ -436,8 +516,12 @@ namespace Greenhaven.Editor
             player.AddComponent<PlayerInteractor>();
 
             Transform visual = Group("Visual", player.transform);
-            if (TryBuildAnimatedAdventurer(visual))
+            if (GreenhavenArt.CharacterAvailable)
             {
+                var motorSo = new SerializedObject(player.GetComponent<PlayerMotor>());
+                float walk = motorSo.FindProperty("walkSpeed").floatValue;
+                float run = motorSo.FindProperty("runSpeed").floatValue;
+                GreenhavenArt.BuildCharacter(visual, "adventurerSkin", GreenhavenArt.PlayerController(walk, run));
                 player.AddComponent<PlayerAnimator>();
                 SetLayerRecursively(player, IgnoreRaycastLayer);
                 return SaveAndConnectPrefab(player, "Player");
@@ -456,171 +540,69 @@ namespace Greenhaven.Editor
             return SaveAndConnectPrefab(player, "Player");
         }
 
-        const string AdventurerFolder = AdventurerImportSettings.Folder;
-        const string AdventurerModelPath = AdventurerFolder + "characterMedium.fbx";
-        const string AdventurerSkinPath = AdventurerFolder + "Textures/adventurerSkin.png";
-        const string AdventurerControllerPath = AdventurerFolder + "Adventurer.controller";
-        const float AdventurerHeight = 1.75f;
-        // Gameplay forward is +Z; rotate the model to match.
-        const float AdventurerYawOffset = 180f; // the Kenney model faces -Z after import
-
-        /// <summary>Instantiates the rigged Kenney adventurer under <paramref name="visual"/>. False if the asset is missing.</summary>
-        static bool TryBuildAnimatedAdventurer(Transform visual)
+        static void BuildNpcs(DialogueView dialogue)
         {
-            if (AssetDatabase.LoadAssetAtPath<GameObject>(AdventurerModelPath) == null)
-            {
-                Debug.LogWarning($"Greenhaven: {AdventurerModelPath} not found; using the primitive placeholder adventurer.");
-                return false;
-            }
+            BuildNpc(dialogue, "Mira", new Vector3(3.5f, 0f, -0.5f), 200f, "miraSkin", "Idle_Loop", "Idle_Talking_Loop",
+                "Oh! A new face in Greenhaven. Welcome, traveller!",
+                "I bake bread for the whole village. The well behind me is the heart of our little plaza.",
+                "Follow the trail north and you'll reach the Whispering Forest gate. Mind your step on the lookout stones to the east!");
 
-            // Make sure the import rules in AdventurerImportSettings have been applied.
-            foreach (string guid in AssetDatabase.FindAssets("t:Model", new[] { AdventurerFolder.TrimEnd('/') }))
-                AssetDatabase.ImportAsset(AssetDatabase.GUIDToAssetPath(guid), ImportAssetOptions.ForceUpdate);
-
-            var modelAsset = AssetDatabase.LoadAssetAtPath<GameObject>(AdventurerModelPath);
-            var model = (GameObject)PrefabUtility.InstantiatePrefab(modelAsset, visual);
-            model.name = "AdventurerModel";
-            model.transform.localRotation = Quaternion.Euler(0f, AdventurerYawOffset, 0f);
-
-            // Fit to the CharacterController: scale to target height and stand on y = 0.
-            Renderer[] renderers = model.GetComponentsInChildren<Renderer>();
-            if (renderers.Length > 0)
-            {
-                Bounds b = renderers[0].bounds;
-                for (int i = 1; i < renderers.Length; i++) b.Encapsulate(renderers[i].bounds);
-                if (b.size.y > 0.001f)
-                {
-                    float scale = AdventurerHeight / b.size.y;
-                    model.transform.localScale = Vector3.one * scale;
-                    model.transform.localPosition = new Vector3(0f, -(b.min.y - visual.position.y) * scale, 0f);
-                }
-            }
-
-            Material skin = AdventurerMaterial();
-            foreach (Renderer r in renderers)
-            {
-                var mats = new Material[r.sharedMaterials.Length];
-                for (int i = 0; i < mats.Length; i++) mats[i] = skin;
-                r.sharedMaterials = mats;
-                r.shadowCastingMode = ShadowCastingMode.On;
-            }
-
-            // Explicit null check: Unity's fake-null objects defeat the ?? operator.
-            Animator animator = model.GetComponent<Animator>();
-            if (animator == null) animator = model.AddComponent<Animator>();
-            animator.runtimeAnimatorController = BuildAdventurerController();
-            animator.applyRootMotion = false;
-            animator.cullingMode = AnimatorCullingMode.CullUpdateTransforms;
-            return true;
+            // Elder Rowan sits on a bench beside the Elder's House.
+            Vector3 benchPos = new Vector3(-7.9f, 0f, 11.3f);
+            const float benchYaw = 135f;
+            Transform bench = new GameObject("Bench").transform;
+            bench.SetPositionAndRotation(benchPos, Quaternion.Euler(0f, benchYaw, 0f));
+            LocalPrim(PrimitiveType.Cube, "Seat", bench, new Vector3(0f, 0.42f, -0.15f), new Vector3(1.8f, 0.1f, 0.5f), "Timber");
+            LocalPrim(PrimitiveType.Cube, "Back", bench, new Vector3(0f, 0.8f, -0.4f), new Vector3(1.8f, 0.6f, 0.08f), "Timber", collider: false);
+            LocalPrim(PrimitiveType.Cube, "LegL", bench, new Vector3(-0.75f, 0.2f, -0.15f), new Vector3(0.1f, 0.4f, 0.45f), "Timber", collider: false);
+            LocalPrim(PrimitiveType.Cube, "LegR", bench, new Vector3(0.75f, 0.2f, -0.15f), new Vector3(0.1f, 0.4f, 0.45f), "Timber", collider: false);
+            BuildNpc(dialogue, "Rowan", benchPos + Quaternion.Euler(0f, benchYaw, 0f) * new Vector3(0f, 0f, RowanSeatForwardOffset), benchYaw,
+                "elderSkin", "Sitting_Idle_Loop", "Sitting_Talking_Loop",
+                "Ah, young explorer. I am Rowan, elder of Greenhaven.",
+                "When I was your age I climbed all the way to Cloudpeak. The view... you never forget it.",
+                "Our supply crates went missing along the forest trail. If you find them, Mira would be grateful.",
+                "And the Great Old Oak to the west? Older than the village itself. Go and say hello.");
         }
 
-        static Material AdventurerMaterial()
+        // How far in front of the bench's centre Rowan's root sits. Tune if the sitting pose floats or clips.
+        const float RowanSeatForwardOffset = 0.1f;
+
+        static void BuildNpc(DialogueView dialogue, string speaker, Vector3 position, float yaw, string skin,
+            string idleClip, string talkClip, params string[] lines)
         {
-            const string path = MaterialFolder + "/M_Adventurer.mat";
-            Material mat = AssetDatabase.LoadAssetAtPath<Material>(path);
-            if (mat == null)
-            {
-                Shader shader = Shader.Find("Universal Render Pipeline/Simple Lit") ?? Shader.Find("Universal Render Pipeline/Lit");
-                mat = new Material(shader);
-                AssetDatabase.CreateAsset(mat, path);
-            }
-            var tex = AssetDatabase.LoadAssetAtPath<Texture2D>(AdventurerSkinPath);
-            mat.SetTexture("_BaseMap", tex);
-            mat.mainTexture = tex;
-            mat.SetColor("_BaseColor", Color.white);
-            if (mat.HasProperty("_Smoothness")) mat.SetFloat("_Smoothness", 0.08f);
-            if (mat.HasProperty("_SpecularHighlights")) mat.SetFloat("_SpecularHighlights", 0f);
-            EditorUtility.SetDirty(mat);
-            return mat;
-        }
-
-        static RuntimeAnimatorController BuildAdventurerController()
-        {
-            AnimationClip idle = LoadClip("idle"), run = LoadClip("run"), jump = LoadClip("jump");
-
-            AssetDatabase.DeleteAsset(AdventurerControllerPath);
-            var controller = UnityEditor.Animations.AnimatorController.CreateAnimatorControllerAtPath(AdventurerControllerPath);
-            controller.AddParameter("MoveSpeed", AnimatorControllerParameterType.Float);
-            controller.AddParameter("Grounded", AnimatorControllerParameterType.Bool);
-            controller.AddParameter("RunPlaybackSpeed", AnimatorControllerParameterType.Float);
-            // The getter returns a copy: edit it, then assign it back. Grounded starts true, playback at 1.
-            AnimatorControllerParameter[] parameters = controller.parameters;
-            foreach (AnimatorControllerParameter p in parameters)
-            {
-                if (p.name == "Grounded") p.defaultBool = true;
-                if (p.name == "RunPlaybackSpeed") p.defaultFloat = 1f;
-            }
-            controller.parameters = parameters;
-
-            var sm = controller.layers[0].stateMachine;
-            var idleState = sm.AddState("Idle");
-            idleState.motion = idle;
-            var runState = sm.AddState("Run");
-            runState.motion = run;
-            runState.speedParameter = "RunPlaybackSpeed";
-            runState.speedParameterActive = true;
-            var jumpState = sm.AddState("Jump");
-            jumpState.motion = jump;
-            sm.defaultState = idleState;
-
-            UnityEditor.Animations.AnimatorStateTransition T(UnityEditor.Animations.AnimatorState from, UnityEditor.Animations.AnimatorState to, float duration)
-            {
-                var t = from.AddTransition(to);
-                t.hasExitTime = false;
-                t.duration = duration;
-                return t;
-            }
-            T(idleState, runState, 0.12f).AddCondition(UnityEditor.Animations.AnimatorConditionMode.Greater, 0.2f, "MoveSpeed");
-            T(runState, idleState, 0.15f).AddCondition(UnityEditor.Animations.AnimatorConditionMode.Less, 0.15f, "MoveSpeed");
-            T(idleState, jumpState, 0.08f).AddCondition(UnityEditor.Animations.AnimatorConditionMode.IfNot, 0f, "Grounded");
-            T(runState, jumpState, 0.08f).AddCondition(UnityEditor.Animations.AnimatorConditionMode.IfNot, 0f, "Grounded");
-            T(jumpState, idleState, 0.1f).AddCondition(UnityEditor.Animations.AnimatorConditionMode.If, 0f, "Grounded");
-
-            if (idle == null || run == null || jump == null)
-                Debug.LogWarning("Greenhaven: one or more adventurer clips (Idle/Run/Jump) were not found; check the FBX import.");
-            AssetDatabase.SaveAssets();
-            return controller;
-        }
-
-        static AnimationClip LoadClip(string fileName)
-        {
-            foreach (Object o in AssetDatabase.LoadAllAssetsAtPath($"{AdventurerFolder}Animations/{fileName}.fbx"))
-            {
-                if (o is AnimationClip clip && !clip.name.StartsWith("__preview__")) return clip;
-            }
-            return null;
-        }
-
-        static void BuildNpc(DialogueView dialogue)
-        {
-            var npc = new GameObject("NPC_Mira");
-            npc.transform.SetPositionAndRotation(new Vector3(3.5f, 0f, -0.5f), Quaternion.Euler(0f, 200f, 0f));
+            var npc = new GameObject("NPC_" + speaker);
+            npc.transform.SetPositionAndRotation(position, Quaternion.Euler(0f, yaw, 0f));
             CapsuleCollider col = npc.AddComponent<CapsuleCollider>();
             col.center = new Vector3(0f, 0.85f, 0f);
             col.height = 1.7f;
             col.radius = 0.35f;
 
             Transform visual = Group("Visual", npc.transform);
-            LocalPrim(PrimitiveType.Capsule, "Body", visual, new Vector3(0f, 0.72f, 0f), new Vector3(0.7f, 0.55f, 0.6f), "NpcDress", collider: false);
-            LocalPrim(PrimitiveType.Cube, "Apron", visual, new Vector3(0f, 0.65f, 0.26f), new Vector3(0.45f, 0.6f, 0.06f), "Apron", collider: false);
-            LocalPrim(PrimitiveType.Sphere, "Head", visual, new Vector3(0f, 1.47f, 0f), Vector3.one * 0.48f, "Skin", collider: false);
-            LocalPrim(PrimitiveType.Sphere, "Bun", visual, new Vector3(0f, 1.72f, -0.12f), Vector3.one * 0.25f, "Dark", collider: false);
-            LocalPrim(PrimitiveType.Sphere, "EyeL", visual, new Vector3(-0.09f, 1.5f, 0.21f), Vector3.one * 0.07f, "Dark", collider: false);
-            LocalPrim(PrimitiveType.Sphere, "EyeR", visual, new Vector3(0.09f, 1.5f, 0.21f), Vector3.one * 0.07f, "Dark", collider: false);
+            Animator animator = null;
+            if (GreenhavenArt.CharacterAvailable)
+            {
+                animator = GreenhavenArt.BuildCharacter(visual, skin, GreenhavenArt.NpcController("NPC_" + speaker, idleClip, talkClip));
+                animator.gameObject.AddComponent<AnimatorRandomStart>();
+            }
+            else
+            {
+                LocalPrim(PrimitiveType.Capsule, "Body", visual, new Vector3(0f, 0.72f, 0f), new Vector3(0.7f, 0.55f, 0.6f), "NpcDress", collider: false);
+                LocalPrim(PrimitiveType.Sphere, "Head", visual, new Vector3(0f, 1.47f, 0f), Vector3.one * 0.48f, "Skin", collider: false);
+            }
 
             DialogueInteractable talk = npc.AddComponent<DialogueInteractable>();
             var so = new SerializedObject(talk);
-            so.FindProperty("speakerName").stringValue = "Mira";
+            so.FindProperty("speakerName").stringValue = speaker;
             so.FindProperty("promptVerb").stringValue = "Talk to";
-            SetStrings(so.FindProperty("lines"),
-                "Oh! A new face in Greenhaven. Welcome, traveller!",
-                "I bake bread for the whole village. The well behind me is the heart of our little plaza.",
-                "Follow the trail north and you'll reach the Whispering Forest gate. Mind your step on the lookout stones to the east!");
+            // A seated elder should not swivel on the bench.
+            so.FindProperty("faceInteractor").boolValue = !idleClip.StartsWith("Sitting");
+            SetStrings(so.FindProperty("lines"), lines);
             so.ApplyModifiedPropertiesWithoutUndo();
 
-            GameObject instance = SaveAndConnectPrefab(npc, "NPC_Villager");
-            // Scene reference applied as an instance override (prefab assets cannot reference scene objects).
+            GameObject instance = SaveAndConnectPrefab(npc, "NPC_" + speaker);
+            // Scene references applied as instance overrides (prefab assets cannot reference scene objects).
             SetRef(instance.GetComponent<DialogueInteractable>(), "dialogueView", dialogue);
+            if (animator != null) SetRef(instance.GetComponent<DialogueInteractable>(), "talkAnimator", animator);
         }
 
         static void BuildSupplies(CollectibleRegistry registry)

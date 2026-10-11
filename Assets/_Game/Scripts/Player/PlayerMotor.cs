@@ -15,7 +15,7 @@ namespace Greenhaven.Player
         Transform cameraTransform;
 
         [Header("Ground movement")]
-        [SerializeField, Min(0f)] float walkSpeed = 2.6f;
+        [SerializeField, Min(0f)] float walkSpeed = 2.0f;
         [SerializeField, Min(0f)] float runSpeed = 5.5f;
         [SerializeField, Min(0f)] float acceleration = 25f;
         [SerializeField, Range(0f, 1f)] float airControl = 0.5f;

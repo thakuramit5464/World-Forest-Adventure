@@ -18,6 +18,11 @@ namespace Greenhaven.Interaction
         Transform interactionPoint;
         [SerializeField, Tooltip("NPCs turn to face the player when spoken to.")]
         bool faceInteractor = true;
+        [SerializeField, Tooltip("Optional. Its \"Talking\" bool is true while this dialogue is open.")]
+        Animator talkAnimator;
+
+        static readonly int TalkingId = Animator.StringToHash("Talking");
+        bool wasTalking;
 
         string startPrompt;
         const string ContinuePrompt = "Continue";
@@ -53,6 +58,15 @@ namespace Greenhaven.Interaction
                 if (look.sqrMagnitude > 0.01f) transform.rotation = Quaternion.LookRotation(look);
             }
             dialogueView.Show(this, speakerName, lines);
+        }
+
+        void Update()
+        {
+            if (talkAnimator == null || dialogueView == null) return;
+            bool talking = dialogueView.IsShowing(this);
+            if (talking == wasTalking) return;
+            wasTalking = talking;
+            talkAnimator.SetBool(TalkingId, talking);
         }
 
         void OnDisable()

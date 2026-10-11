@@ -26,6 +26,9 @@ namespace Greenhaven.Interaction
         /// <summary>Raised when the selected target changes (argument may be null).</summary>
         public event Action<IInteractable> TargetChanged;
 
+        /// <summary>Raised after the player successfully interacts with a target.</summary>
+        public event Action<IInteractable> Interacted;
+
         void Awake()
         {
             if (input == null) TryGetComponent(out input);
@@ -90,6 +93,7 @@ namespace Greenhaven.Interaction
                            < float.PositiveInfinity;
             if (!inRange || !target.CanInteract(gameObject)) return;
             target.Interact(gameObject);
+            Interacted?.Invoke(target);
             nextScanTime = 0f; // rescan next frame: the target may now be collected or changed
         }
 
