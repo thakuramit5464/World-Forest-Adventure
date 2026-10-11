@@ -100,6 +100,6 @@ Legend: `[x]` done and verified · `[~]` implemented and compiles, Play-mode/dev
 - [ ] Multiplayer or cloud save.
 
 ## Tools — Procedural asset generator
-- [~] Stage 1: pine, broadleaf and rock generators, asset saving (meshes, shared palette material, prefabs), editor window, preview scene, validation and EditMode tests. Compile pending (Unity has not refreshed yet); generation in the Editor not yet verified.
+- [~] Stage 1: pine, broadleaf and rock generators, asset saving (meshes, shared palette material, prefabs), editor window, preview scene, validation and EditMode tests. Compiles cleanly (verified 15:19); generation in the Editor and the tests not yet run.
 - [ ] Stage 2: bushes and flowers (palette rows reserved).
 - [ ] Decide whether generated assets replace or complement the Quaternius props in `GreenhavenRegion` (needs owner approval before changing the main scene).
