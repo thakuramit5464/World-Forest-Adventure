@@ -26,7 +26,9 @@ namespace Greenhaven.Editor
         const string NatureTextures = ArtImportSettings.NatureFolder + "Textures/";
 
         public const float CharacterHeight = 1.75f;
-        const float CharacterYawOffset = 180f; // the Kenney model faces -Z after import
+        // Humanoid animation orients the body along the Animator's +Z, so no correction is needed
+        // (the 180° the Generic rig needed would now face the character backwards).
+        const float CharacterYawOffset = 0f;
 
         public static bool CharacterAvailable =>
             AssetDatabase.LoadAssetAtPath<GameObject>(CharacterModelPath) != null &&
@@ -38,9 +40,13 @@ namespace Greenhaven.Editor
 
         // ───────────────────────────── Import preparation ─────────────────────────────
 
+        /// <summary>Models that could not be found during the current build (reported by the builder).</summary>
+        public static int MissingModels { get; private set; }
+
         /// <summary>Makes sure import rules have been applied and nature materials are remapped.</summary>
         public static void PrepareImports()
         {
+            MissingModels = 0;
             EnsureFolder(ControllerFolder);
             EnsureHumanoid(CharacterModelPath);
             EnsureHumanoid(LibraryPath);
@@ -163,6 +169,7 @@ namespace Greenhaven.Editor
             if (asset == null)
             {
                 Debug.LogWarning($"Greenhaven: model not found: {assetPath}");
+                MissingModels++;
                 return null;
             }
 
@@ -504,7 +511,7 @@ namespace Greenhaven.Editor
                     {
                         Vector3 p = centre + new Vector3(Range(rng, -spread, spread), 0f, Range(rng, -spread, spread));
                         if (!isClear(p, margin)) continue;
-                        Placed? plant = Place(model(), plants, p, Range(rng, 0f, 360f), Range(rng, minSize, maxSize), fit);
+                        Placed? plant = Place(N(model()), plants, p, Range(rng, 0f, 360f), Range(rng, minSize, maxSize), fit);
                         if (plant != null) ShadowsOff(plant.Value.Root);
                     }
                 }

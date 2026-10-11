@@ -92,8 +92,8 @@ namespace Greenhaven.Editor
             int badRefs = ValidateSceneReferences(scene);
             EditorSceneManager.SaveScene(scene, ScenePath);
             AddSceneToBuildSettings(ScenePath);
-            if (badRefs == 0) Debug.Log($"Greenhaven: built {ScenePath}. Press Play to explore.");
-            else Debug.LogError($"Greenhaven: built {ScenePath} with {badRefs} bad reference(s); see errors above.");
+            if (badRefs == 0 && GreenhavenArt.MissingModels == 0) Debug.Log($"Greenhaven: built {ScenePath}. Press Play to explore.");
+            else Debug.LogError($"Greenhaven: built {ScenePath} with {badRefs} bad reference(s) and {GreenhavenArt.MissingModels} missing model placement(s); see messages above.");
         }
 
         // ───────────────────────────── Materials ─────────────────────────────
