@@ -124,6 +124,7 @@ namespace Greenhaven.Editor.VillageScene
             // 5. Buildings, square, road furniture, gardens, exit, stream blockers, boundaries.
             PlaceBuildings(buildings, layout);
             DialogueView dialogue = BuildGameplay(out GameObject player);
+            WorldTools.WorldLinkSetup.AddToVillage(p => Height(p.x, p.y)); // north gate → Cloudpeak, and the arrival back
             BuildSquare(props, layout, dialogue);
             BuildRoad(props, layout, dialogue);
             foreach (Slot slot in BuildingSlots.Where(b => b.Kind == AssetCategory.Cottage && b.Variant < 2))
@@ -148,6 +149,8 @@ namespace Greenhaven.Editor.VillageScene
             if (badRefs > 0) log.AppendLine($"{badRefs} scene reference problem(s); see Console.");
             if (missing.Count > 0) log.AppendLine("Missing prefabs: " + string.Join(", ", missing.Distinct()));
             EditorSceneManager.SaveScene(scene, ScenePath);
+            if (File.Exists(Cloudpeak.CloudpeakSceneBuilder.ScenePath))
+                log.AppendLine("Linked to CloudpeakAdventure through the north gate. Build scene list:\n" + WorldTools.WorldLinkSetup.UpdateBuildScenes());
 
             int objects = Object.FindObjectsByType<Transform>(FindObjectsSortMode.None).Length;
             log.Insert(0, $"Village scene saved to {ScenePath} ({objects} transforms). It is not added to Build Settings.\n");
@@ -157,20 +160,18 @@ namespace Greenhaven.Editor.VillageScene
         static bool EnsureAssets(out string message)
         {
             message = null;
-            var absent = Generators.All
-                .SelectMany(g => Enumerable.Range(0, g.DefaultCount).Select(v => GeneratedAssetStore.PrefabPath(GeneratedAssetStore.AssetName(g, settings.Seed, v))))
-                .Where(path => AssetDatabase.LoadAssetAtPath<GameObject>(path) == null)
-                .ToList();
+            // The village does not use the forest-floor props (logs, stumps, mushrooms); only missing types are generated.
+            List<IAssetGenerator> absent = GeneratedAssetStore.MissingGenerators(settings.Seed, Generators.All.Where(g => !(g is ForestPropGenerator)));
             if (absent.Count > 0)
             {
                 if (!EditorUtility.DisplayDialog("Generate village assets?",
-                        $"{absent.Count} generated prefab(s) for seed {settings.Seed} are missing. Generate the village asset set now?",
+                        $"Generated prefabs for seed {settings.Seed} are missing ({string.Join(", ", absent.Select(g => g.DisplayName))}). Generate them now?",
                         "Generate", "Cancel"))
                 {
                     message = "Cancelled: village assets for this seed are missing. Use Greenhaven ▸ Generate Village Assets first.";
                     return false;
                 }
-                log.AppendLine(AssetGeneratorWindow.GenerateDefaults(settings).Split('\n')[0]);
+                log.AppendLine(GeneratedAssetStore.GenerateMissing(absent, settings).Split('\n')[0]);
             }
             // Vegetation made before the wind system uses the static material: offer to upgrade it in place.
             AssetCategory[] stale = AmbientMotionSetup.NotWindReady(settings.Seed);

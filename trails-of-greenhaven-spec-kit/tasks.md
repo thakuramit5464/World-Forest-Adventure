@@ -135,3 +135,20 @@ Legend: `[x]` done and verified · `[~]` implemented and compiles, Play-mode/dev
 - [~] Village breeze: wind-readiness upgrade prompt, grass scatter, LeafDrift, ambience, hanging WindSwing sign and F2 panel in `GreenhavenVillage` (shared `AmbientMotionSetup`). Compiles cleanly (17:51); owner play-test pending.
 - [ ] Stage 3: wind-reactive signs and banners (C#, using WindManager.Sway); leaf and petal particles.
 - [ ] Android profiling: vertex cost of WindLit, batching check in the Frame Debugger.
+
+## Phase 3 — Whispering Forest, Cloudpeak Mountain and Summit Trail
+- [x] Inspect the existing scenes, player, generators and wind; choose a separate scene (`CloudpeakAdventure`) connected by the village's north exit.
+- [~] Terrain generator (`CloudpeakWorld`): forest floor, foothill skirt, shelf, summit cone and plateau, ridges, boundary hills, brook; deterministic; parameters in the Cloudpeak Generator window.
+- [~] Continuous trail: forest S-curve, brook bridge, switchbacks with hairpins, shelf traverse, summit spiral ledge, final approach through the arch; grade-limited; terrain carved to the trail.
+- [~] Forest population by region; logs, stumps, mushrooms (new `ForestPropGenerator`); view corridors to the summit.
+- [~] Mountain details: cliff rocks, boulders, distant peaks; summit arch, shrine, cairn with wind-swung banner, overlook walls.
+- [~] Points of interest: Whispering Glade, Foothill Rest, Eagle Ledge, Summit; signs; 5 Cloud Feathers and the "Feathers of Cloudpeak" quest.
+- [~] Wind, leaves, ambience and the F2 panel reused; one wind manager.
+- [~] Validation in the builder: data checks, obstacle sweep, summit visibility, CharacterController walk test. In-memory trail checks pass for the default settings; a full build ran once (an earlier version); its report must be re-read after the next rebuild.
+- [ ] Owner play-test: walk entrance → summit with keyboard and touch controls; check the camera on the spiral ledge and at the hairpins.
+- [x] Tune extreme settings: default plus 12 other combinations pass the in-memory trail checks.
+- [~] Scene flow: linked scenes (SceneGate, SceneArrival, ScreenFader); village north gate ↔ Cloudpeak entrance; build list with the village first. Owner play-test pending.
+- [ ] Carry collectibles and quest progress across scenes (with save/load, Phase 6).
+- [ ] Android profiling of CloudpeakAdventure (triangles in view, batches, LOD culling distances, terrain grid size).
+- [x] Removed the temporary `CloudpeakDiagnostics` editor hook.
+

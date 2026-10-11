@@ -49,6 +49,16 @@ namespace Greenhaven.Editor.AssetGenerator
         public static string PrefabPath(string name) => $"{PrefabFolder}/{name}.prefab";
 
         /// <summary>Generates and saves the requested assets. Returns a human-readable report.</summary>
+        /// <summary>Generators that have at least one default variant prefab missing for this seed.</summary>
+        public static List<IAssetGenerator> MissingGenerators(int seed, IEnumerable<IAssetGenerator> generators) =>
+            generators.Where(g => Enumerable.Range(0, g.DefaultCount)
+                    .Any(v => AssetDatabase.LoadAssetAtPath<GameObject>(PrefabPath(AssetName(g, seed, v))) == null))
+                .ToList();
+
+        /// <summary>Generates the default variants of the given generators (confirms before replacing existing ones).</summary>
+        public static string GenerateMissing(IEnumerable<IAssetGenerator> generators, GeneratorSettings settings) =>
+            Generate(generators.Select(g => new Request { Generator = g, Count = g.DefaultCount }).ToList(), settings);
+
         public static string Generate(IReadOnlyList<Request> requests, GeneratorSettings settings)
         {
             var planned = new List<(IAssetGenerator gen, int variant, string name)>();

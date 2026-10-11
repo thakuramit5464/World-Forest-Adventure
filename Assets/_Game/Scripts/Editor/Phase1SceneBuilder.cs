@@ -697,7 +697,7 @@ namespace Greenhaven.Editor
 
         // ───────────────────────────── Quests ─────────────────────────────
 
-        const string QuestFolder = GameRoot + "/ScriptableObjects/Quests";
+        internal const string QuestFolder = GameRoot + "/ScriptableObjects/Quests";
 
         static QuestManager BuildQuests(CollectibleRegistry registry, out QuestDefinition supplies, out QuestDefinition request)
         {
@@ -723,7 +723,7 @@ namespace Greenhaven.Editor
             return manager;
         }
 
-        static QuestDefinition QuestAsset(string fileName, System.Action<QuestDefinition> configure)
+        internal static QuestDefinition QuestAsset(string fileName, System.Action<QuestDefinition> configure)
         {
             string path = $"{QuestFolder}/{fileName}.asset";
             var quest = AssetDatabase.LoadAssetAtPath<QuestDefinition>(path);
@@ -772,7 +772,7 @@ namespace Greenhaven.Editor
         }
 
         /// <summary>A bobbing, spinning pickup with a stable ID and a trigger the interactor can find.</summary>
-        static void CollectibleProp(Transform parent, CollectibleRegistry registry, string id, string itemType, string displayName,
+        internal static void CollectibleProp(Transform parent, CollectibleRegistry registry, string id, string itemType, string displayName,
             Vector3 position, float visualHeight, System.Action<Transform> buildVisual)
         {
             var root = new GameObject($"Collectible_{id}");
@@ -1047,7 +1047,7 @@ namespace Greenhaven.Editor
             return bad;
         }
 
-        static Transform Group(string name, Transform parent)
+        internal static Transform Group(string name, Transform parent)
         {
             var go = new GameObject(name);
             go.transform.SetParent(parent, false);
@@ -1145,7 +1145,7 @@ namespace Greenhaven.Editor
             for (int i = 0; i < values.Length; i++) array.GetArrayElementAtIndex(i).stringValue = values[i];
         }
 
-        static void EnsureFolder(string path)
+        internal static void EnsureFolder(string path)
         {
             if (AssetDatabase.IsValidFolder(path)) return;
             string parent = Path.GetDirectoryName(path)?.Replace('\\', '/');
