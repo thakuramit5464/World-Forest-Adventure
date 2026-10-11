@@ -116,8 +116,7 @@ namespace Greenhaven.Editor.AssetGenerator
             if (existing != null)
             {
                 // Copy into the existing asset so its GUID (and every reference to it) survives.
-                existing.Clear();
-                EditorUtility.CopySerialized(fresh, existing);
+                CopyMeshData(fresh, existing);
                 existing.name = Path.GetFileNameWithoutExtension(path);
                 Object.DestroyImmediate(fresh);
                 EditorUtility.SetDirty(existing);
@@ -144,6 +143,25 @@ namespace Greenhaven.Editor.AssetGenerator
                 }
             }
             return asset;
+        }
+
+        /// <summary>
+        /// Explicit copy through the Mesh API. (EditorUtility.CopySerialized lost the vertex data of
+        /// skinned meshes that were in use by a renderer, leaving an empty mesh.)
+        /// </summary>
+        static void CopyMeshData(Mesh source, Mesh target)
+        {
+            target.Clear();
+            target.indexFormat = source.indexFormat;
+            target.vertices = source.vertices;
+            target.normals = source.normals;
+            target.uv = source.uv;
+            BoneWeight[] weights = source.boneWeights;
+            if (weights.Length == source.vertexCount && weights.Length > 0) target.boneWeights = weights;
+            target.bindposes = source.bindposes;
+            target.subMeshCount = source.subMeshCount;
+            for (int i = 0; i < source.subMeshCount; i++) target.SetTriangles(source.GetTriangles(i), i, false);
+            target.RecalculateBounds();
         }
 
         static void SavePrefab(string name, Mesh mesh, Material material, GeneratedMesh generated)
