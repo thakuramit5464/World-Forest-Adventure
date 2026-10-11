@@ -528,6 +528,7 @@ namespace Greenhaven.Editor
             player.AddComponent<PlayerInputReader>();
             player.AddComponent<PlayerMotor>();
             player.AddComponent<PlayerInteractor>();
+            player.AddComponent<AnimationDebugOverlay>(); // F3 in the Editor/dev builds
 
             Transform visual = Group("Visual", player.transform);
             // Preference: explicit override → rigged Greenhaven Adventurer model → generated hero (v2, then v1).

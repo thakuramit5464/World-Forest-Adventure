@@ -71,6 +71,9 @@ namespace Greenhaven.Editor.CharacterTest
             // Gameplay: player (own prefab), camera, HUD.
             GameObject player = Phase1SceneBuilder.BuildPlayer(new Vector3(0f, 0.05f, -4f), "Player_CharacterTest", hero);
             Phase1SceneBuilder.BuildCamera(player);
+            var overlay = new SerializedObject(player.GetComponent<Greenhaven.Player.AnimationDebugOverlay>());
+            overlay.FindProperty("visibleOnStart").boolValue = true; // show animation state by default here
+            overlay.ApplyModifiedPropertiesWithoutUndo();
             var registry = new GameObject("CollectibleRegistry").AddComponent<CollectibleRegistry>();
             var quests = new GameObject("QuestManager").AddComponent<QuestManager>();
             Phase1SceneBuilder.SetRef(quests, "registry", registry);

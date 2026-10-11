@@ -33,6 +33,9 @@ namespace Greenhaven.Interaction
 
         public string SpeakerName => speakerName;
 
+        /// <summary>True while this speaker's dialogue is on screen.</summary>
+        public bool IsInConversation => dialogueView != null && dialogueView.IsShowing(this);
+
         public string Prompt => dialogueView != null && dialogueView.IsShowing(this) ? ContinuePrompt : startPrompt;
 
         public Vector3 InteractionPoint => interactionPoint != null ? interactionPoint.position : transform.position;

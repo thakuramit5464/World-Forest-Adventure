@@ -306,6 +306,9 @@ namespace Greenhaven.Editor
             c.AddParameter("Grounded", AnimatorControllerParameterType.Bool);
             c.AddParameter("Jump", AnimatorControllerParameterType.Trigger);
             c.AddParameter("Interact", AnimatorControllerParameterType.Trigger);
+            c.AddParameter("PickUp", AnimatorControllerParameterType.Trigger);
+            c.AddParameter("Emote", AnimatorControllerParameterType.Trigger);
+            c.AddParameter("Talking", AnimatorControllerParameterType.Bool);
             AnimatorControllerParameter[] parameters = c.parameters; // copy: edit, then assign back
             foreach (AnimatorControllerParameter p in parameters)
                 if (p.name == "Grounded") p.defaultBool = true;
@@ -339,6 +342,20 @@ namespace Greenhaven.Editor
             Transition(land, locomotion, 0.15f, 0.6f);
             Transition(land, locomotion, 0.1f).AddCondition(AnimatorConditionMode.Greater, 1f, "MoveSpeed");
 
+            // Full-body pick-up (collectibles) and an idle emote; moving or falling cancels both.
+            AnimatorState pickUp = sm.AddState("PickUp");
+            pickUp.motion = Clip(LibraryPath, "PickUp_Table");
+            Transition(locomotion, pickUp, 0.12f).AddCondition(AnimatorConditionMode.If, 0f, "PickUp");
+            Transition(pickUp, locomotion, 0.2f, 0.9f);
+            Transition(pickUp, locomotion, 0.15f).AddCondition(AnimatorConditionMode.Greater, 1.2f, "MoveSpeed");
+
+            AnimatorState emote = sm.AddState("Emote");
+            emote.motion = Clip(LibraryPath, "Dance_Loop");
+            Transition(locomotion, emote, 0.3f).AddCondition(AnimatorConditionMode.If, 0f, "Emote");
+            Transition(emote, locomotion, 0.3f, 2f);                     // two loops, then back to idle
+            Transition(emote, locomotion, 0.15f).AddCondition(AnimatorConditionMode.Greater, 0.3f, "MoveSpeed");
+            Transition(emote, airborne, 0.1f).AddCondition(AnimatorConditionMode.IfNot, 0f, "Grounded");
+
             // Upper-body gesture layer.
             var actions = new AnimatorStateMachine { name = "Actions", hideFlags = HideFlags.HideInHierarchy };
             AssetDatabase.AddObjectToAsset(actions, c);
@@ -347,7 +364,7 @@ namespace Greenhaven.Editor
                 name = "Actions",
                 stateMachine = actions,
                 avatarMask = UpperBodyMask(),
-                defaultWeight = 1f,
+                defaultWeight = 0f, // PlayerAnimator fades this in only while a gesture plays
                 blendingMode = AnimatorLayerBlendingMode.Override,
             });
             AnimatorState empty = actions.AddState("Empty");
@@ -361,6 +378,13 @@ namespace Greenhaven.Editor
             toInteract.duration = 0.1f;
             toInteract.canTransitionToSelf = false;
             Transition(interact, empty, 0.2f, 0.85f);
+
+            // Talking gestures while a conversation is open.
+            AnimatorState talk = actions.AddState("Talk");
+            talk.motion = Clip(LibraryPath, "Idle_Talking_Loop");
+            talk.writeDefaultValues = false;
+            Transition(empty, talk, 0.25f).AddCondition(AnimatorConditionMode.If, 0f, "Talking");
+            Transition(talk, empty, 0.25f).AddCondition(AnimatorConditionMode.IfNot, 0f, "Talking");
 
             // IK pass on the base layer enables head/eye look-at (HeroSecondaryMotion.OnAnimatorIK).
             AnimatorControllerLayer[] layers = c.layers; // copy: edit, then assign back
