@@ -1,0 +1,48 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3df36c4bf84fff34bb562d6b4969c4a3, type: 3}
+  m_Name: WeatherProfile_Default
+  m_EditorClassIdentifier: Greenhaven::Greenhaven.Weather.WeatherProfile
+  presets:
+  - State: 2
+    SunIntensityScale: 0.35
+    SunTint: {r: 0.75, g: 0.8, b: 0.9, a: 1}
+    AmbientSky: {r: 0.38, g: 0.43, b: 0.52, a: 1}
+    AmbientEquator: {r: 0.36, g: 0.4, b: 0.42, a: 1}
+    AmbientGround: {r: 0.22, g: 0.22, b: 0.22, a: 1}
+    FogColor: {r: 0.55, g: 0.6, b: 0.66, a: 1}
+    FogStart: 12
+    FogEnd: 65
+    Rain: 1
+    Wind: 0.8
+  - State: 3
+    SunIntensityScale: 0.55
+    SunTint: {r: 0.95, g: 0.95, b: 1, a: 1}
+    AmbientSky: {r: 0.6, g: 0.64, b: 0.7, a: 1}
+    AmbientEquator: {r: 0.58, g: 0.62, b: 0.64, a: 1}
+    AmbientGround: {r: 0.35, g: 0.35, b: 0.34, a: 1}
+    FogColor: {r: 0.78, g: 0.82, b: 0.86, a: 1}
+    FogStart: 1.5
+    FogEnd: 26
+    Rain: 0
+    Wind: 0.1
+  - State: 1
+    SunIntensityScale: 0.6
+    SunTint: {r: 0.9, g: 0.92, b: 1, a: 1}
+    AmbientSky: {r: 0.55, g: 0.62, b: 0.74, a: 1}
+    AmbientEquator: {r: 0.55, g: 0.6, b: 0.58, a: 1}
+    AmbientGround: {r: 0.33, g: 0.3, b: 0.27, a: 1}
+    FogColor: {r: 0.68, g: 0.75, b: 0.82, a: 1}
+    FogStart: 35
+    FogEnd: 130
+    Rain: 0
+    Wind: 0.4

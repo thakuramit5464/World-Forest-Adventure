@@ -118,3 +118,9 @@ Legend: `[x]` done and verified · `[~]` implemented and compiles, Play-mode/dev
 - [ ] Move Mira, Rowan and the quests into the village layout (currently only in `GreenhavenRegion`).
 - [ ] Device profiling of the village scene.
 - [ ] Decide whether generated assets replace or complement the Quaternius props in `GreenhavenRegion` (needs owner approval before changing the main scene).
+
+## Weather
+- [~] Phase 1: WeatherManager (Sunny/Rainy/Foggy with smooth transitions, intensity, optional auto changes), rain particles that follow the camera, linear fog, original-lighting restore, profile asset, editor menu and inspector, EditMode tests. Compiles cleanly (verified 17:06); in-Editor visual check pending.
+- [ ] Owner check in Play mode: switch Sunny → Rainy → Foggy → Sunny; confirm the original look returns and the rain stays around the player.
+- [ ] Android check: rain particle cost and fog on a low-end device.
+- [ ] Phase 2: tune and test Cloudy, then consider snow, thunderstorms, a wind shader for vegetation, and a rain audio clip (CC0).

@@ -90,6 +90,7 @@ namespace Greenhaven.Editor
 
             GameObject player = BuildPlayer(SpawnPoint);
             BuildCamera(player);
+            WeatherTools.WeatherSetup.AddToScene();
             CollectibleRegistry registry = new GameObject("CollectibleRegistry").AddComponent<CollectibleRegistry>();
             QuestManager quests = BuildQuests(registry, out QuestDefinition supplies, out QuestDefinition request);
             DialogueView dialogue = BuildHud(player, quests);
