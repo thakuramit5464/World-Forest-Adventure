@@ -31,15 +31,18 @@ namespace Greenhaven.Editor.AssetGenerator
             int blades = rng.Next(style == 2 ? 10 : 8, style == 2 ? 14 : 12);
             float spread = s.Size * (style == 2 ? 0.2f : 0.12f);
 
-            var mb = new MeshBuilder
-            {
-                // Tips bend most (squared falloff); slight flutter; grass sways a bit faster than trees.
-                Wind = p => new Vector3(0.55f * Mathf.Pow(Mathf.Clamp01(p.y / maxHeight), 2f), 0.15f, 1.4f),
-            };
+            var mb = new MeshBuilder();
             int baseShade = GenPalette.PickShade(rng, 2, v);
 
             for (int b = 0; b < blades; b++)
             {
+                // Each blade bends from a fixed root (squared falloff to the tip) with its own phase.
+                float bladePhase = Mathf.Repeat(b * 0.618f + variant * 0.29f, 1f);
+                mb.Wind = p =>
+                {
+                    float h = Mathf.Clamp01(p.y / maxHeight);
+                    return new Vector4(0f, h * h, bladePhase, 0.15f * h); // roots: no bend, no flutter
+                };
                 float angle = Range(rng, 0f, Mathf.PI * 2f);
                 var outward = new Vector3(Mathf.Cos(angle), 0f, Mathf.Sin(angle));
                 Vector3 root = outward * Range(rng, 0f, spread);

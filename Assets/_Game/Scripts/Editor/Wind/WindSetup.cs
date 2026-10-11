@@ -138,6 +138,97 @@ namespace Greenhaven.Editor.WindTools
             return $"Wind test scene saved to {TestScenePath} with {placed} plants. Press Play, then use Greenhaven ▸ Wind (or the Wind object's inspector).";
         }
 
+        // ───────────────────────────── Tree comparison ─────────────────────────────
+
+        public const string ComparisonScenePath = "Assets/_Game/Scenes/TreeComparison.unity";
+        const string ComparisonFolder = GeneratedAssetStore.Root + "/Comparison";
+
+        [MenuItem("Greenhaven/Wind/Create Tree Comparison Scene", priority = 302)]
+        static void ComparisonMenu()
+        {
+            string result = CreateComparisonScene(GeneratorPrefs.Settings);
+            Debug.Log("Greenhaven — Tree comparison:\n" + result);
+            EditorUtility.DisplayDialog("Tree Comparison", result, "OK");
+        }
+
+        /// <summary>
+        /// Side-by-side broadleaf trees: original canopy, improved canopy (static material) and improved
+        /// canopy with wind. Comparison meshes live in Generated/Comparison and never replace game prefabs.
+        /// </summary>
+        public static string CreateComparisonScene(GeneratorSettings settings)
+        {
+            if (EditorApplication.isPlaying) return "Stop Play mode first.";
+            if (File.Exists(ComparisonScenePath) && !EditorUtility.DisplayDialog("Rebuild tree comparison scene?",
+                    $"{ComparisonScenePath} and its comparison meshes in {ComparisonFolder} will be rebuilt. Game prefabs are not touched.",
+                    "Rebuild", "Cancel"))
+                return "Cancelled.";
+            if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo()) return "Cancelled (current scene not saved).";
+
+            GeneratedAssetStore.EnsureFolders();
+            if (!AssetDatabase.IsValidFolder(ComparisonFolder)) AssetDatabase.CreateFolder(GeneratedAssetStore.Root, "Comparison");
+            Material staticMaterial = GeneratedAssetStore.EnsurePaletteMaterial(GenPalette.Nature);
+            Material windMaterial = GeneratedAssetStore.EnsureWindMaterial(GenPalette.Nature, AssetCategory.BroadleafTree);
+
+            var generator = new BroadleafTreeGenerator();
+            var original = new Mesh[3];
+            var improved = new Mesh[3];
+            int originalTris = 0, improvedTris = 0;
+            for (int v = 0; v < 3; v++)
+            {
+                string a = $"Cmp_BroadleafV1_s{settings.Seed}_v{v:00}", b = $"Cmp_BroadleafV2_s{settings.Seed}_v{v:00}";
+                original[v] = GeneratedAssetStore.SaveMesh(generator.BuildV1(settings, v, a).Mesh, $"{ComparisonFolder}/{a}.asset");
+                improved[v] = GeneratedAssetStore.SaveMesh(generator.Build(settings, v, b).Mesh, $"{ComparisonFolder}/{b}.asset");
+                originalTris += original[v].triangles.Length / 3;
+                improvedTris += improved[v].triangles.Length / 3;
+            }
+            AssetDatabase.SaveAssets();
+
+            Phase1SceneBuilder.CreateMaterials();
+            var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
+            Phase1SceneBuilder.BuildLighting();
+            GameObject ground = GameObject.CreatePrimitive(PrimitiveType.Plane);
+            ground.name = "Ground";
+            ground.transform.localScale = new Vector3(4f, 1f, 4f);
+            ground.GetComponent<Renderer>().sharedMaterial = AssetDatabase.LoadAssetAtPath<Material>("Assets/_Game/Materials/M_Grass.mat");
+
+            Font font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            string[] columns = { "Original", "Improved (static)", "Improved + wind" };
+            for (int c = 0; c < 3; c++)
+            {
+                float x = (c - 1) * 9f;
+                var label = new GameObject($"Label_{columns[c]}");
+                label.transform.position = new Vector3(x, 0.05f, -3f);
+                label.transform.rotation = Quaternion.Euler(60f, 0f, 0f);
+                TextMesh tm = label.AddComponent<TextMesh>();
+                tm.text = columns[c];
+                tm.font = font;
+                tm.fontSize = 64;
+                tm.characterSize = 0.06f;
+                tm.anchor = TextAnchor.MiddleCenter;
+                tm.color = new Color(0.12f, 0.18f, 0.1f);
+                label.GetComponent<MeshRenderer>().sharedMaterial = font.material;
+
+                for (int v = 0; v < 3; v++)
+                {
+                    var tree = new GameObject($"{columns[c]} ({generator.StyleName(v)})");
+                    tree.transform.position = new Vector3(x, 0f, v * 9f);
+                    tree.AddComponent<MeshFilter>().sharedMesh = c == 0 ? original[v] : improved[v];
+                    tree.AddComponent<MeshRenderer>().sharedMaterial = c == 2 ? windMaterial : staticMaterial;
+                }
+            }
+
+            AddToScene();
+            var cam = new GameObject("Main Camera") { tag = "MainCamera" }.AddComponent<Camera>();
+            cam.clearFlags = CameraClearFlags.SolidColor;
+            cam.backgroundColor = new Color(0.72f, 0.85f, 0.96f);
+            cam.transform.SetPositionAndRotation(new Vector3(0f, 7f, -20f), Quaternion.Euler(14f, 0f, 0f));
+            cam.gameObject.AddComponent<AudioListener>();
+
+            EditorSceneManager.SaveScene(scene, ComparisonScenePath);
+            return $"Comparison scene saved to {ComparisonScenePath}. Triangles for 3 styles: original {originalTris}, improved {improvedTris} " +
+                   $"(Foliage Detail {settings.Detail:0.00}). Press Play to see the wind column move.";
+        }
+
         // ───────────────────────────── Play-mode test menu ─────────────────────────────
 
         static WindManager Manager() => Object.FindAnyObjectByType<WindManager>();

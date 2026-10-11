@@ -23,11 +23,20 @@ namespace Greenhaven.Editor.AssetGenerator
         public const string Label = "GreenhavenGenerated";
 
 
-        /// <summary>Categories whose prefabs use the shared wind material (Greenhaven/WindLit). Others stay static.</summary>
-        public static readonly HashSet<AssetCategory> WindCategories = new HashSet<AssetCategory>
-        {
-            AssetCategory.PineTree, AssetCategory.BroadleafTree, AssetCategory.Grass,
-        };
+        /// <summary>
+        /// Plant types animated by Greenhaven/WindLit, with their material defaults:
+        /// (trunk sway m, sway frequency, outer canopy m, inner canopy, gust response, flutter m).
+        /// Each type gets ONE shared material, so it can be tuned per type while instances still batch.
+        /// </summary>
+        public static readonly Dictionary<AssetCategory, (float trunk, float frequency, float canopy, float inner, float gust, float flutter)> WindCategories =
+            new Dictionary<AssetCategory, (float, float, float, float, float, float)>
+            {
+                [AssetCategory.BroadleafTree] = (0.12f, 0.9f, 0.32f, 0.25f, 0.6f, 0.02f),
+                [AssetCategory.PineTree] = (0.15f, 0.7f, 0.22f, 0.3f, 0.5f, 0.012f),
+                [AssetCategory.Grass] = (0f, 1.4f, 0.16f, 0.1f, 0.8f, 0.01f),
+                [AssetCategory.Bush] = (0f, 1.1f, 0.08f, 0.3f, 0.6f, 0.012f),
+                [AssetCategory.Flower] = (0f, 1.6f, 0.07f, 0.1f, 0.8f, 0.006f),
+            };
 
         public struct Request
         {
@@ -77,7 +86,7 @@ namespace Greenhaven.Editor.AssetGenerator
             }
 
             EnsureFolders();
-            var materials = new Dictionary<(Palette, bool), Material>();
+            var materials = new Dictionary<(Palette, AssetCategory?), Material>();
             var report = new StringBuilder();
             int created = 0, replaced = 0, triangles = 0;
 
@@ -90,9 +99,11 @@ namespace Greenhaven.Editor.AssetGenerator
 
                     GeneratedMesh generated = gen.Build(settings, variant, name);
                     bool existed = AssetDatabase.LoadMainAssetAtPath(MeshPath(name)) != null;
-                    bool wind = WindCategories.Contains(gen.Category);
-                    if (!materials.TryGetValue((gen.Palette, wind), out Material material))
-                        materials[(gen.Palette, wind)] = material = wind ? EnsureWindMaterial(gen.Palette) : EnsurePaletteMaterial(gen.Palette);
+                    AssetCategory? windType = WindCategories.ContainsKey(gen.Category) ? gen.Category : (AssetCategory?)null;
+                    if (!materials.TryGetValue((gen.Palette, windType), out Material material))
+                        materials[(gen.Palette, windType)] = material = windType.HasValue
+                            ? EnsureWindMaterial(gen.Palette, windType.Value)
+                            : EnsurePaletteMaterial(gen.Palette);
                     Mesh meshAsset = SaveMesh(generated.Mesh, MeshPath(name), settings);
                     SavePrefab(name, meshAsset, material, generated);
 
@@ -163,7 +174,7 @@ namespace Greenhaven.Editor.AssetGenerator
             target.vertices = source.vertices;
             target.normals = source.normals;
             target.uv = source.uv;
-            var wind = new List<Vector3>();
+            var wind = new List<Vector4>();
             source.GetUVs(2, wind);
             if (wind.Count == source.vertexCount) target.SetUVs(2, wind); // wind data for Greenhaven/WindLit
             BoneWeight[] weights = source.boneWeights;
@@ -295,13 +306,14 @@ namespace Greenhaven.Editor.AssetGenerator
         }
 
         /// <summary>
-        /// Shared wind material for a palette (Greenhaven/WindLit): one material for every wind-animated plant
-        /// of that palette, so batching is preserved. Wind amplitude/flutter defaults can be tuned on the asset.
+        /// Shared wind material for one plant type (Greenhaven/WindLit), e.g. M_Gen_Wind_Broadleaf. Defaults
+        /// come from <see cref="WindCategories"/> on creation; later tuning on the asset is preserved.
         /// </summary>
-        public static Material EnsureWindMaterial(Palette paletteDef)
+        public static Material EnsureWindMaterial(Palette paletteDef, AssetCategory type)
         {
             Material palette = EnsurePaletteMaterial(paletteDef); // makes sure the palette texture exists
-            string path = $"{MaterialFolder}/M_Gen_{paletteDef.Name}Wind.mat";
+            string name = $"M_Gen_Wind_{Generators.For(type).Prefix}";
+            string path = $"{MaterialFolder}/{name}.mat";
             var material = AssetDatabase.LoadAssetAtPath<Material>(path);
             if (material == null)
             {
@@ -311,7 +323,14 @@ namespace Greenhaven.Editor.AssetGenerator
                     Debug.LogWarning("Greenhaven: Greenhaven/WindLit shader not found; using the static palette material.");
                     return palette;
                 }
-                material = new Material(shader) { name = $"M_Gen_{paletteDef.Name}Wind" };
+                material = new Material(shader) { name = name };
+                var d = WindCategories[type];
+                material.SetFloat("_TrunkSway", d.trunk);
+                material.SetFloat("_SwayFrequency", d.frequency);
+                material.SetFloat("_CanopySway", d.canopy);
+                material.SetFloat("_InnerCanopy", d.inner);
+                material.SetFloat("_GustResponse", d.gust);
+                material.SetFloat("_FlutterAmplitude", d.flutter);
                 AssetDatabase.CreateAsset(material, path);
                 AssetDatabase.SetLabels(material, new[] { Label });
             }

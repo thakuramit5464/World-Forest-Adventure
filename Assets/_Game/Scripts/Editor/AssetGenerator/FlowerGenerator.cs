@@ -34,6 +34,15 @@ namespace Greenhaven.Editor.AssetGenerator
             {
                 Vector3 root = i == 0 ? Vector3.zero : new Vector3(Range(rng, -0.18f, 0.18f), 0f, Range(rng, -0.18f, 0.18f)) * s.Size;
                 float height = s.Size * (style == 2 ? Range(rng, 0.55f, 0.7f) : Range(rng, 0.25f, 0.4f));
+                // Wind: the stem bends from a fixed root (squared falloff); head, leaves and petals follow
+                // because the data depends only on height. Each flower has its own phase.
+                float stemHeight = height;
+                float phase = Mathf.Repeat(i * 0.618f + variant * 0.31f, 1f);
+                mb.Wind = p =>
+                {
+                    float h = Mathf.Clamp01(p.y / stemHeight);
+                    return new Vector4(0f, h * h, phase, 0.2f * h);
+                };
                 Flower(mb, rng, root, height, s.Size * (style == 2 ? 0.11f : 0.08f), petals, v);
             }
 

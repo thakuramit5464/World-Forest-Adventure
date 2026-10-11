@@ -5,6 +5,9 @@ namespace Greenhaven.Wind
 {
     public enum WindPreset { Calm, Breeze, Strong }
 
+    /// <summary>Visual cost of wind: High = all motion, Low = no leaf flutter and less cross-wind motion, Off = still.</summary>
+    public enum WindQuality { Off, Low, High }
+
     /// <summary>
     /// The one place wind is simulated. Each frame it smooths strength toward base + gusts (seeded Perlin
     /// noise), advances a phase, lets the direction wander slightly, and publishes everything as global
@@ -17,6 +20,7 @@ namespace Greenhaven.Wind
     {
         static readonly int DirectionId = Shader.PropertyToID("_GH_WindDirection");
         static readonly int ParamsId = Shader.PropertyToID("_GH_WindParams");
+        static readonly int QualityId = Shader.PropertyToID("_GH_WindQuality");
 
         public static WindManager Current { get; private set; }
 
@@ -28,11 +32,13 @@ namespace Greenhaven.Wind
         [Header("Gusts")]
         [SerializeField, Range(0f, 1f)] float gustStrength = 0.35f;
         [SerializeField, Range(0.01f, 1f), Tooltip("Gust variation rate (higher = more frequent gusts).")] float gustFrequency = 0.15f;
+        [SerializeField, Range(0.2f, 8f), Tooltip("Seconds a gust takes to build and fade (smooth bend and recovery).")] float gustDuration = 2.5f;
         [SerializeField, Range(0f, 45f)] float directionWander = 12f;
         [SerializeField] int seed = 1234;
         [SerializeField, Min(0.05f), Tooltip("Seconds to settle when strength changes.")] float responseSeconds = 1.5f;
 
         [Header("Quality")]
+        [SerializeField, Tooltip("Low suits entry-level phones (no leaf flutter, less cross-wind motion).")] WindQuality quality = WindQuality.High;
         [SerializeField, Range(0f, 1f), Tooltip("Scales visible wind motion. 0 = still vegetation (cheapest test of the effect).")]
         float effectScale = 1f;
 
@@ -65,12 +71,15 @@ namespace Greenhaven.Wind
         {
             if (Current == this) Current = null;
             Shader.SetGlobalVector(ParamsId, Vector4.zero); // vegetation returns to its rest pose
+            Shader.SetGlobalVector(QualityId, Vector4.zero);
         }
 
         public void SetEnabled(bool on) => windEnabled = on;
         public void SetDirection(float degrees) => directionDegrees = Mathf.Repeat(degrees, 360f);
         public void SetBaseStrength(float value) => baseStrength = Mathf.Clamp01(value);
         public void SetEffectScale(float value) => effectScale = Mathf.Clamp01(value);
+        public void SetQuality(WindQuality value) => quality = value;
+        public WindQuality Quality => quality;
 
         public void ApplyPreset(WindPreset preset)
         {
@@ -102,11 +111,14 @@ namespace Greenhaven.Wind
 
             float targetBase = baseStrength;
             if (followWeather && weather != null && weather.isActiveAndEnabled) targetBase = Mathf.Max(baseStrength, weather.Wind);
-            float target = windEnabled ? Mathf.Clamp01(targetBase + targetGust * gustStrength) : 0f;
 
+            // Base strength follows responseSeconds; gusts build and fade over gustDuration, so trees bend and
+            // recover smoothly instead of snapping.
             float k = 1f - Mathf.Exp(-dt / responseSeconds);
-            strength += (target - strength) * k;
-            gust += (targetGust - gust) * k;
+            float kGust = 1f - Mathf.Exp(-dt / (gustDuration * 0.5f));
+            gust += (targetGust - gust) * kGust;
+            float smoothedTarget = windEnabled ? Mathf.Clamp01(targetBase + gust * gustStrength) : 0f;
+            strength += (smoothedTarget - strength) * k;
             phase += dt * speed * (0.6f + strength); // stronger wind sways a little faster, with no phase jumps
             UpdateDirection(t);
             Publish();
@@ -121,8 +133,11 @@ namespace Greenhaven.Wind
 
         void Publish()
         {
+            float scale = quality == WindQuality.Off ? 0f : quality == WindQuality.Low ? effectScale * 0.7f : effectScale;
             Shader.SetGlobalVector(DirectionId, Direction);
-            Shader.SetGlobalVector(ParamsId, new Vector4(strength * effectScale, phase, gust, windEnabled ? 1f : 0f));
+            Shader.SetGlobalVector(ParamsId, new Vector4(strength * scale, phase, gust, windEnabled && quality != WindQuality.Off ? 1f : 0f));
+            // x = leaf flutter scale, y = cross-wind (secondary) motion scale.
+            Shader.SetGlobalVector(QualityId, quality == WindQuality.High ? new Vector4(1f, 1f, 0f, 0f) : new Vector4(0f, 0.5f, 0f, 0f));
         }
 
         /// <summary>

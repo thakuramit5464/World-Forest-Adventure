@@ -4,9 +4,11 @@ using System.Linq;
 using System.Text;
 using Greenhaven.Collectibles;
 using Greenhaven.Editor.AssetGenerator;
+using Greenhaven.Editor.WindTools;
 using Greenhaven.Interaction;
 using Greenhaven.Quests;
 using Greenhaven.UI;
+using Greenhaven.Wind;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
@@ -130,11 +132,17 @@ namespace Greenhaven.Editor.VillageScene
             BuildHousePlanters(props, layout);
             BuildStreamBlockers(env);
             BuildBoundaries(env);
+            BuildHangingSign(props, layout, dialogue);
 
             // 6. Vegetation from the existing nature generators.
             BuildVegetation(vegetation, layout, treeDensity);
 
-            // 7. Validate and save.
+            // 7. Environmental motion: drifting leaves, optional ambience, F2 breeze panel (hidden at start).
+            LeafDrift leaves = AmbientMotionSetup.AddLeafDrift();
+            AmbienceController ambience = AmbientMotionSetup.AddAmbience();
+            AmbientMotionSetup.AddDebugPanel(Object.FindFirstObjectByType<WindManager>(), leaves, ambience, player, visibleOnStart: false);
+
+            // 8. Validate and save.
             ValidateLayout(layout, doors, player);
             int badRefs = Phase1SceneBuilder.ValidateSceneReferences(scene);
             if (badRefs > 0) log.AppendLine($"{badRefs} scene reference problem(s); see Console.");
@@ -163,6 +171,20 @@ namespace Greenhaven.Editor.VillageScene
                     return false;
                 }
                 log.AppendLine(AssetGeneratorWindow.GenerateDefaults(settings).Split('\n')[0]);
+            }
+            // Vegetation made before the wind system uses the static material: offer to upgrade it in place.
+            AssetCategory[] stale = AmbientMotionSetup.NotWindReady(settings.Seed);
+            if (stale.Length > 0)
+            {
+                string list = string.Join(", ", stale.Select(t => Generators.For(t).DisplayName));
+                if (EditorUtility.DisplayDialog("Upgrade vegetation for wind?",
+                        $"These plants for seed {settings.Seed} are not wind-ready yet: {list}. Regenerate them so they sway?\n" +
+                        "Existing ones are replaced in place (you will be asked to confirm). Skip keeps them static.", "Upgrade", "Skip"))
+                    log.AppendLine(GeneratedAssetStore.Generate(
+                        stale.Select(t => new GeneratedAssetStore.Request { Generator = Generators.For(t), Count = Generators.For(t).DefaultCount }).ToList(),
+                        settings).Split('\n')[0]);
+                else
+                    log.AppendLine($"Wind upgrade skipped: {list} stay static.");
             }
             if (HeroGenerator.FindPrefab(settings.Seed) == null &&
                 EditorUtility.DisplayDialog("Generate hero?", $"No generated hero found. Generate the hero for seed {settings.Seed} now?\n" +
@@ -363,6 +385,25 @@ namespace Greenhaven.Editor.VillageScene
             Phase1SceneBuilder.SetStrings(so.FindProperty("lines"), lines);
             so.FindProperty("dialogueView").objectReferenceValue = dialogue;
             so.ApplyModifiedPropertiesWithoutUndo();
+        }
+
+        /// <summary>A wind-swung hanging sign beside the main road, at the first free candidate spot.</summary>
+        static void BuildHangingSign(Transform parent, VillageLayout layout, DialogueView dialogue)
+        {
+            // (post, yaw): the arm points away from the road so the board hangs beside it, facing walkers.
+            var candidates = new[] { (new Vector2(-3.2f, -15f), 180f), (new Vector2(3.2f, -18f), 0f), (new Vector2(-3.2f, -21f), 180f), (new Vector2(3.4f, 23f), 0f) };
+            foreach (var (post, yaw) in candidates)
+            {
+                Vector3 arm3 = Quaternion.Euler(0f, yaw, 0f) * Vector3.right;
+                var arm = new Vector2(arm3.x, arm3.z);
+                if (!layout.IsFree(post, 0.4f) || !layout.IsFree(post + arm * 0.7f, 0.3f) || Mathf.Abs(post.y - StreamZ(post.x)) < 3f) continue;
+                AmbientMotionSetup.AddHangingSign(parent, OnGround(post), yaw, settings.Seed, dialogue,
+                    "The Breezy Bough — Greenhaven's notice sign. It creaks when the wind picks up.",
+                    "Press F2 to open the breeze controls.");
+                layout.AddKeepClear(post + arm * 0.45f, 0.9f);
+                return;
+            }
+            log.AppendLine("⚠ No free spot for the hanging sign.");
         }
 
         // ───────────────────────────── Square, road, gardens ─────────────────────────────
@@ -566,6 +607,9 @@ namespace Greenhaven.Editor.VillageScene
 
             Transform treeGroup = Group("Trees", parent), rockGroup = Group("Rocks", parent);
             Transform bushGroup = Group("Bushes", parent), flowerGroup = Group("Flowers", parent);
+            Transform grassGroup = Group("Grass", parent);
+            int grassVariants = Generators.For(AssetCategory.Grass).DefaultCount;
+            int flowerVariants = Generators.For(AssetCategory.Flower).DefaultCount;
 
             void Scatter(int count, float minR, float maxR, float spacing, float margin, AssetCategory kind, int variants,
                 Transform group, float minScale, float maxScale, float sink, bool isTree)
@@ -587,6 +631,37 @@ namespace Greenhaven.Editor.VillageScene
             Scatter(Mathf.RoundToInt(26 * density), 26f, WallRadius - 1f, 4f, 1.5f, AssetCategory.PineTree, 3, treeGroup, 0.9f, 1.3f, 0.05f, true);
             Scatter(Mathf.RoundToInt(12 * density), 22f, WallRadius - 1f, 0f, 1.2f, AssetCategory.Rock, 6, rockGroup, 0.8f, 1.4f, 0.08f, false);
             Scatter(Mathf.RoundToInt(16 * density), 10f, 24f, 0f, 1f, AssetCategory.Bush, 3, bushGroup, 0.8f, 1.15f, 0f, false);
+
+            Scatter(Mathf.RoundToInt(130 * density), SquareRadius + 1.5f, 30f, 0f, 0.3f, AssetCategory.Grass, grassVariants, grassGroup, 0.8f, 1.25f, 0f, false);
+
+            // Grass and the odd flower along path edges, so the walk is framed by moving plants.
+            float totalLength = layout.Paths.Sum(path => Vector2.Distance(path.a, path.b));
+            int edgeTarget = Mathf.RoundToInt(110 * density);
+            for (int attempt = 0, placed = 0; totalLength > 0f && attempt < edgeTarget * 30 && placed < edgeTarget; attempt++)
+            {
+                // A segment picked by length, then a point just beside it.
+                float pick = R(0f, totalLength);
+                var seg = layout.Paths[layout.Paths.Count - 1];
+                foreach (var path in layout.Paths)
+                {
+                    float len = Vector2.Distance(path.a, path.b);
+                    if (pick <= len)
+                    {
+                        seg = path;
+                        break;
+                    }
+                    pick -= len;
+                }
+                Vector2 dir = (seg.b - seg.a).normalized;
+                Vector2 p = Vector2.Lerp(seg.a, seg.b, R(0f, 1f)) +
+                            new Vector2(-dir.y, dir.x) * (rng.NextDouble() < 0.5 ? -1f : 1f) * (seg.halfWidth + R(0.35f, 2.2f));
+                if (!Inside(p) || NearStream(p, 0f) || !layout.IsFree(p, 0.25f)) continue;
+                GameObject go = rng.NextDouble() < 0.2
+                    ? Place(Prefab(AssetCategory.Flower, rng.Next(flowerVariants)), flowerGroup, OnGround(p), R(0f, 360f), R(0.9f, 1.15f))
+                    : Place(Prefab(AssetCategory.Grass, rng.Next(grassVariants)), grassGroup, OnGround(p), R(0f, 360f), R(0.8f, 1.2f));
+                if (go == null) break;
+                placed++;
+            }
 
             // Rocks along the stream banks.
             for (int i = 0, placed = 0; i < 200 && placed < Mathf.RoundToInt(8 * density); i++)
@@ -618,7 +693,7 @@ namespace Greenhaven.Editor.VillageScene
                 for (int k = 0; k < flowers; k++)
                 {
                     Vector2 p = c + new Vector2(R(-1.2f, 1.2f), R(-1.2f, 1.2f));
-                    if (layout.IsFree(p, 0.2f)) Place(Prefab(AssetCategory.Flower, rng.Next(4)), flowerGroup, OnGround(p), R(0f, 360f), R(0.9f, 1.2f));
+                    if (layout.IsFree(p, 0.2f)) Place(Prefab(AssetCategory.Flower, rng.Next(flowerVariants)), flowerGroup, OnGround(p), R(0f, 360f), R(0.9f, 1.2f));
                 }
             }
         }

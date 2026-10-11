@@ -35,8 +35,18 @@ namespace Greenhaven.Editor.AssetGenerator
             float spread = style == 1 ? 0.75f : 0.4f;
             Vector3 squash = style == 1 ? new Vector3(1.15f, 0.75f, 1.15f) : new Vector3(1f, 0.85f, 1f);
             var tops = new Vector3[blobs];
+            // Wind: anchored at the ground (weights fade in over the first 30 cm); outer blobs move more,
+            // each with its own phase.
+            float bushHeight = 1.2f * size;
+            System.Func<Vector3, Vector4> BushWind(float outer, float phase) => p =>
+            {
+                float anchor = Mathf.SmoothStep(0f, 1f, Mathf.Clamp01(p.y / (0.3f * size)));
+                float h = Mathf.Clamp01(p.y / bushHeight);
+                return new Vector4(0.15f * h, outer * anchor, phase, 0.4f * h * anchor);
+            };
             for (int i = 0; i < blobs; i++)
             {
+                mb.Wind = BushWind(i == 0 ? 0.35f : 0.8f, Mathf.Repeat(i * 0.618f + variant * 0.41f, 1f));
                 float angle = i * Mathf.PI * 2f / blobs + Range(rng, -0.4f, 0.4f);
                 float r = (i == 0 ? 0.62f : Range(rng, 0.42f, 0.55f)) * size;
                 var centre = i == 0
@@ -48,6 +58,7 @@ namespace Greenhaven.Editor.AssetGenerator
                 tops[i] = centre + Vector3.up * r * squash.y * 0.85f;
             }
 
+            mb.Wind = BushWind(0.8f, Mathf.Repeat(variant * 0.53f, 1f));
             if (style == 2)
             {
                 // Blossoms dotted over the upper surface.

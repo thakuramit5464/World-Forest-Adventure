@@ -1,12 +1,14 @@
 // Greenhaven/WindLit — low-cost URP lit shader (Lambert + ambient SH + main-light shadows + fog, like
-// Simple Lit with no specular) with world-space wind deformation driven by WindManager globals.
+// Simple Lit without specular) with world-space wind deformation driven by WindManager globals.
 //
-// Per-vertex wind data comes from UV2 (TEXCOORD2), baked by the procedural generators:
-//   x = bend   (0 at the root → ~1 at the tips, already scaled per plant type) — roots never move
-//   y = flutter (small leaf jitter; 0 for trunks)
-//   z = frequency multiplier per plant type
-// Displacement depends only on world position + mask, so coincident vertices of faceted meshes move
-// together (no cracks) and static batching / the SRP Batcher keep working.
+// Per-vertex wind data in UV2 (TEXCOORD2, float4), baked by the procedural generators:
+//   x = trunk bend    0 at the roots → 1 at the top. Whole-plant sway, coherent across the plant.
+//   y = canopy weight 0 near the trunk/inner canopy → 1 at the outer canopy (grass: blade tips).
+//   z = cluster phase 0..1, constant per foliage cluster (or grass blade) so clusters move as groups,
+//                     each slightly out of step with its neighbours.
+//   w = flutter       small leaf shimmer (0 for wood).
+// Displacement is a function of world position + this data, so coincident vertices stay together
+// (no cracks) and static batching / the SRP Batcher keep working. Roots never move (x = y = w = 0).
 Shader "Greenhaven/WindLit"
 {
     Properties
@@ -16,10 +18,17 @@ Shader "Greenhaven/WindLit"
         [Toggle(_ALPHATEST_ON)] _AlphaClip("Alpha Clip", Float) = 0
         _Cutoff("Alpha Cutoff", Range(0, 1)) = 0.5
         [Enum(UnityEngine.Rendering.CullMode)] _Cull("Cull", Float) = 2
-        [Header(Wind)]
-        _WindAmplitude("Sway Amplitude (m at bend 1)", Range(0, 2)) = 0.35
-        _WindFrequency("Sway Frequency", Range(0.1, 4)) = 1
-        _FlutterAmplitude("Flutter Amplitude (m)", Range(0, 0.2)) = 0.03
+        [Header(Whole plant)]
+        _TrunkSway("Trunk Sway (m at the top)", Range(0, 1)) = 0.12
+        _SwayFrequency("Sway Frequency", Range(0.1, 4)) = 0.9
+        [Header(Canopy)]
+        _CanopySway("Outer Canopy Movement (m)", Range(0, 1)) = 0.35
+        _InnerCanopy("Inner Canopy Movement (relative)", Range(0, 1)) = 0.25
+        _GustResponse("Extra Canopy Response to Gusts", Range(0, 2)) = 0.6
+        _Variation("Per-Tree Variation", Range(0, 2)) = 1
+        [Header(Leaves)]
+        _FlutterAmplitude("Flutter Amplitude (m)", Range(0, 0.1)) = 0.02
+        _FlutterFrequency("Flutter Frequency", Range(1, 12)) = 5
     }
 
     SubShader
@@ -33,9 +42,14 @@ Shader "Greenhaven/WindLit"
             float4 _BaseMap_ST;
             half4 _BaseColor;
             half _Cutoff;
-            float _WindAmplitude;
-            float _WindFrequency;
+            float _TrunkSway;
+            float _SwayFrequency;
+            float _CanopySway;
+            float _InnerCanopy;
+            float _GustResponse;
+            float _Variation;
             float _FlutterAmplitude;
+            float _FlutterFrequency;
         CBUFFER_END
 
         TEXTURE2D(_BaseMap);
@@ -44,20 +58,36 @@ Shader "Greenhaven/WindLit"
         // Set once per frame by WindManager (all zero = no wind, rest pose).
         float4 _GH_WindDirection; // xyz = normalised direction
         float4 _GH_WindParams;    // x = strength 0..1 (incl. gusts), y = phase (s), z = gust 0..1, w = enabled 0/1
+        float4 _GH_WindQuality;   // x = flutter scale, y = secondary (cross-wind) scale
 
-        float3 ApplyWind(float3 positionWS, float3 wind)
+        float3 ApplyWind(float3 positionWS, float4 wind)
         {
-            float strength = _GH_WindParams.x * _GH_WindParams.w;
-            float frequency = _WindFrequency * max(wind.z, 0.05);
-            // Phase varies across the world so neighbours never sway in sync (and gusts travel).
-            float phase = _GH_WindParams.y * frequency + dot(positionWS.xz, float2(0.13, 0.09));
-            // Biased forwards: wind pushes downwind and the plant rocks back a little.
-            float sway = sin(phase) * 0.55 + sin(phase * 2.3 + 1.7) * 0.2 + 0.45;
-            float push = wind.x * _WindAmplitude * strength * sway;
-            float3 offset = _GH_WindDirection.xyz * push;
-            offset.y -= abs(push) * 0.2; // bend in an arc rather than stretching
-            float f = sin(_GH_WindParams.y * 6.0 * frequency + dot(positionWS, float3(3.1, 2.3, 2.7)));
-            offset += float3(f, 0.5 * f, -f) * (wind.y * _FlutterAmplitude * (0.25 + strength) * _GH_WindParams.w);
+            float enabled = _GH_WindParams.w;
+            float strength = _GH_WindParams.x * enabled;
+            float time = _GH_WindParams.y;
+            float gust = _GH_WindParams.z * enabled;
+            float3 dir = _GH_WindDirection.xyz;
+            float3 across = float3(-dir.z, 0.0, dir.x);
+
+            // 1. Whole-plant sway: long wavelength so one tree moves coherently; biased downwind.
+            float trunkPhase = time * _SwayFrequency + dot(positionWS.xz, float2(0.07, 0.05)) * _Variation;
+            float trunkSway = (sin(trunkPhase) * 0.5 + 0.5) * 0.6 + 0.4;
+            float3 offset = dir * (wind.x * _TrunkSway * strength * trunkSway);
+
+            // 2. Canopy clusters: calm inside, lively outside; each cluster has its own phase, with a
+            //    small cross-wind component so motion orbits slightly instead of rocking stiffly.
+            float canopy = wind.y * lerp(wind.y * _InnerCanopy, 1.0, wind.y);
+            float clusterPhase = time * _SwayFrequency * 1.6 + wind.z * 6.2831 + dot(positionWS.xz, float2(0.21, 0.17)) * _Variation;
+            float push = sin(clusterPhase) * 0.6 + 0.4;
+            float sideways = sin(clusterPhase * 0.73 + 1.3) * 0.35 * _GH_WindQuality.y;
+            float amplitude = _CanopySway * canopy * strength * (1.0 + gust * _GustResponse);
+            offset += (dir * push + across * sideways) * amplitude;
+            offset.y -= abs(amplitude * push) * 0.15; // arc, not stretch
+
+            // 3. Leaf flutter: tiny and quick.
+            float f = sin(time * _FlutterFrequency + wind.z * 12.0 + dot(positionWS, float3(3.1, 2.3, 2.7)));
+            offset += float3(f, 0.5 * f, -f) * (wind.w * _FlutterAmplitude * (0.25 + strength) * enabled * _GH_WindQuality.x);
+
             return positionWS + offset;
         }
         ENDHLSL
@@ -85,7 +115,7 @@ Shader "Greenhaven/WindLit"
                 float4 positionOS : POSITION;
                 float3 normalOS : NORMAL;
                 float2 uv : TEXCOORD0;
-                float3 wind : TEXCOORD2;
+                float4 wind : TEXCOORD2;
                 UNITY_VERTEX_INPUT_INSTANCE_ID
             };
 
@@ -160,7 +190,7 @@ Shader "Greenhaven/WindLit"
                 float4 positionOS : POSITION;
                 float3 normalOS : NORMAL;
                 float2 uv : TEXCOORD0;
-                float3 wind : TEXCOORD2;
+                float4 wind : TEXCOORD2;
                 UNITY_VERTEX_INPUT_INSTANCE_ID
             };
 
@@ -176,7 +206,6 @@ Shader "Greenhaven/WindLit"
                 Varyings output;
                 UNITY_SETUP_INSTANCE_ID(input);
                 UNITY_TRANSFER_INSTANCE_ID(input, output);
-                // Shadows sway with the plant.
                 float3 positionWS = ApplyWind(TransformObjectToWorld(input.positionOS.xyz), input.wind);
                 float3 normalWS = TransformObjectToWorldNormal(input.normalOS);
                 #if _CASTING_PUNCTUAL_LIGHT_SHADOW
@@ -219,7 +248,7 @@ Shader "Greenhaven/WindLit"
             {
                 float4 positionOS : POSITION;
                 float2 uv : TEXCOORD0;
-                float3 wind : TEXCOORD2;
+                float4 wind : TEXCOORD2;
                 UNITY_VERTEX_INPUT_INSTANCE_ID
             };
 
@@ -270,7 +299,7 @@ Shader "Greenhaven/WindLit"
                 float4 positionOS : POSITION;
                 float3 normalOS : NORMAL;
                 float2 uv : TEXCOORD0;
-                float3 wind : TEXCOORD2;
+                float4 wind : TEXCOORD2;
                 UNITY_VERTEX_INPUT_INSTANCE_ID
             };
 

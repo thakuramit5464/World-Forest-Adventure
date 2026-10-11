@@ -38,8 +38,13 @@ namespace Greenhaven.Editor.AssetGenerator
         public float Size;
         [Tooltip("0 = uniform colours, 1 = strong per-asset and per-face variation.")]
         public float ColorVariation;
+        [Tooltip("Foliage cluster count and smoothness (0.3 = low-end phones, 1 = full). 0 in older saved settings means full.")]
+        public float FoliageDetail;
 
-        public static GeneratorSettings Default => new GeneratorSettings { Seed = 1234, Size = 1f, ColorVariation = 0.5f };
+        /// <summary>Effective foliage detail, 0.3..1 (older settings without the field count as full detail).</summary>
+        public float Detail => FoliageDetail <= 0f ? 1f : Mathf.Clamp(FoliageDetail, 0.3f, 1f);
+
+        public static GeneratorSettings Default => new GeneratorSettings { Seed = 1234, Size = 1f, ColorVariation = 0.5f, FoliageDetail = 0.8f };
     }
 
     /// <summary>How the prefab should collide.</summary>

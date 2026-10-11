@@ -12,6 +12,15 @@ namespace Greenhaven.Player
     {
         [SerializeField] bool visibleOnStart;
 
+        bool visible;
+
+        /// <summary>Show or hide the readout (also toggled with F3).</summary>
+        public bool Visible
+        {
+            get => visible;
+            set => visible = value;
+        }
+
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
         static readonly string[] StateNames = { "Locomotion", "JumpStart", "Airborne", "Land", "PickUp", "Emote", "Interact", "Talk", "Empty" };
         static readonly int MoveSpeedId = Animator.StringToHash("MoveSpeed");
@@ -19,7 +28,6 @@ namespace Greenhaven.Player
 
         PlayerAnimator playerAnimator;
         PlayerMotor motor;
-        bool visible;
         GUIStyle style;
 
         void Awake()

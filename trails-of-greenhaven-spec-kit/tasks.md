@@ -128,6 +128,10 @@ Legend: `[x]` done and verified · `[~]` implemented and compiles, Play-mode/dev
 ## Wind
 - [~] Stage 1: WindManager (gusts, seeded variation, presets, weather link), Greenhaven/WindLit shader, wind data in pine, broadleaf and new grass generators, Wind Test scene, menus and inspector, EditMode tests.
 - [ ] Owner visual check in the Wind Test scene (roots anchored, no cracks, gusts smooth).
-- [ ] Stage 2: bushes and flowers; place grass in the village scatter.
+- [~] Broadleaf canopy v2 (layered clusters, independent cluster motion, inner/outer falloff), per-type wind materials, gust duration, wind quality, Foliage Detail, Tree Comparison scene.
+- [ ] Owner sign-off on broadleaf v2, then: pine canopy rework (layered branch tufts), regenerate village trees.
+- [~] Stage 2: bushes and flowers wind data and materials; grass in the village scatter (meadow and path edges).
+- [~] Breeze demo scene (GreenhavenBreezeDemo) with WindSwing sign, LeafDrift particles, optional ambience, F2 debug panel. Owner play-test pending.
+- [~] Village breeze: wind-readiness upgrade prompt, grass scatter, LeafDrift, ambience, hanging WindSwing sign and F2 panel in `GreenhavenVillage` (shared `AmbientMotionSetup`). Compiles cleanly (17:51); owner play-test pending.
 - [ ] Stage 3: wind-reactive signs and banners (C#, using WindManager.Sway); leaf and petal particles.
 - [ ] Android profiling: vertex cost of WindLit, batching check in the Frame Debugger.

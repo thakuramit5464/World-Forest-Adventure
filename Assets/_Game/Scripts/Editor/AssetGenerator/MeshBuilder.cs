@@ -17,7 +17,7 @@ namespace Greenhaven.Editor.AssetGenerator
         readonly List<Vector2> uvs = new List<Vector2>();
         readonly List<int> triangles = new List<int>();
         readonly List<BoneWeight> boneWeights = new List<BoneWeight>();
-        readonly List<Vector3> windData = new List<Vector3>();
+        readonly List<Vector4> windData = new List<Vector4>();
 
         public int TriangleCount => triangles.Count / 3;
 
@@ -28,12 +28,12 @@ namespace Greenhaven.Editor.AssetGenerator
         public Func<Vector3, BoneWeight> Skin;
 
         /// <summary>
-        /// Optional wind data (stored in UV2 for the Greenhaven/WindLit shader): x = bend (0 at the root),
-        /// y = flutter, z = frequency multiplier. Evaluated per vertex position, so coincident vertices of
-        /// faceted meshes get identical values and move together. Parts added while it is null get zero
+        /// Optional wind data (UV2, for the Greenhaven/WindLit shader): x = trunk bend (0 at the roots),
+        /// y = canopy weight (0 inner to 1 outer), z = cluster phase 0..1, w = flutter. Evaluated per vertex
+        /// position, so coincident vertices get identical values. Parts added while it is null get zero
         /// (no movement).
         /// </summary>
-        public Func<Vector3, Vector3> Wind;
+        public Func<Vector3, Vector4> Wind;
 
         /// <summary>Face normal of (a, b, c) flipped to agree with <paramref name="outward"/>.</summary>
         public static Vector3 OrientedNormal(Vector3 a, Vector3 b, Vector3 c, Vector3 outward)
@@ -77,10 +77,10 @@ namespace Greenhaven.Editor.AssetGenerator
             }
             if (Wind != null || windData.Count > 0)
             {
-                while (windData.Count < i) windData.Add(Vector3.zero); // earlier parts had no wind
-                windData.Add(Wind != null ? Wind(a) : Vector3.zero);
-                windData.Add(Wind != null ? Wind(b) : Vector3.zero);
-                windData.Add(Wind != null ? Wind(c) : Vector3.zero);
+                while (windData.Count < i) windData.Add(Vector4.zero); // earlier parts had no wind
+                windData.Add(Wind != null ? Wind(a) : Vector4.zero);
+                windData.Add(Wind != null ? Wind(b) : Vector4.zero);
+                windData.Add(Wind != null ? Wind(c) : Vector4.zero);
             }
         }
 

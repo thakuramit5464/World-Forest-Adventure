@@ -33,14 +33,17 @@ namespace Greenhaven.Editor.AssetGenerator
 
             var mb = new MeshBuilder();
             // Wind: pines are stiffer and slower than broadleaf trees; roots fixed, tiers flutter slightly.
-            System.Func<Vector3, Vector3> Bend(float flutter) => p => new Vector3(0.7f * Mathf.Pow(Mathf.Clamp01(p.y / height), 1.6f), flutter, 0.8f);
-            mb.Wind = Bend(0f);
+            // Wind (interim, until the pine canopy rework): trunk bend with height; each tier is one cluster
+            // with its own phase, its rim moving more than its centre.
+            float Bend(float y) => 0.7f * Mathf.Pow(Mathf.Clamp01(y / height), 1.6f);
+            System.Func<Vector3, Vector4> Tier(float phase) => p =>
+                new Vector4(Bend(p.y), 0.1f + 0.8f * Mathf.Clamp01(new Vector2(p.x, p.z).magnitude / maxRadius), phase, 0.35f);
+            mb.Wind = p => new Vector4(Bend(p.y), 0f, 0f, 0f);
 
             int bark = GenPalette.PickShade(rng, 3, v);
             Shapes.Frustum(mb, Vector3.zero, Vector3.up, height * 0.4f, trunkRadius, trunkRadius * 0.55f, 6,
                 n => GenPalette.UV(Ramp.Bark, bark + GenPalette.FaceJitter(rng, v)), capTop: false);
 
-            mb.Wind = Bend(0.35f);
             int green = GenPalette.PickShade(rng, 3, v);
             for (int i = 0; i < layers; i++)
             {
@@ -49,9 +52,11 @@ namespace Greenhaven.Editor.AssetGenerator
                 float layerHeight = height * Mathf.Lerp(0.3f, 0.2f, t) * Range(rng, 0.9f, 1.1f);
                 float radius = maxRadius * Mathf.Lerp(1f, 0.3f, t) * Range(rng, 0.9f, 1.1f);
                 int shade = green + (i > layers / 2 ? 1 : 0); // upper layers catch more light
+                mb.Wind = Tier(Mathf.Repeat(i * 0.618f + variant * 0.37f, 1f)); // phase from index: shapes unchanged
                 ConeLayer(mb, rng, baseY, layerHeight, radius, layerHeight * 0.15f, segments, shade, v);
             }
             // Pointed tip so every silhouette ends cleanly.
+            mb.Wind = Tier(Mathf.Repeat(layers * 0.618f + variant * 0.37f, 1f));
             ConeLayer(mb, rng, height * 0.86f, height * 0.14f, maxRadius * 0.18f, 0f, 6, green + 2, v);
 
             return new GeneratedMesh

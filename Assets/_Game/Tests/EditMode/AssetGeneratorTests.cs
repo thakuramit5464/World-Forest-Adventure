@@ -98,7 +98,8 @@ namespace Greenhaven.Tests
                     Mesh mesh = gen.Build(Settings(21), variant, "tree").Mesh;
                     int triangles = mesh.triangles.Length / 3;
                     Object.DestroyImmediate(mesh);
-                    Assert.That(triangles, Is.LessThanOrEqualTo(800), $"{gen.Prefix} variant {variant}");
+                    // Fuller layered broadleaf canopy at full Foliage Detail; lower detail settings use far fewer.
+                    Assert.That(triangles, Is.LessThanOrEqualTo(2200), $"{gen.Prefix} variant {variant}");
                 }
             }
         }

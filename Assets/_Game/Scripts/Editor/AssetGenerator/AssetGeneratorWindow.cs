@@ -21,6 +21,7 @@ namespace Greenhaven.Editor.AssetGenerator
                     Seed = EditorPrefs.GetInt(Key + "Seed", d.Seed),
                     Size = EditorPrefs.GetFloat(Key + "Size", d.Size),
                     ColorVariation = EditorPrefs.GetFloat(Key + "ColorVariation", d.ColorVariation),
+                    FoliageDetail = EditorPrefs.GetFloat(Key + "FoliageDetail", d.FoliageDetail),
                 };
             }
             set
@@ -28,6 +29,7 @@ namespace Greenhaven.Editor.AssetGenerator
                 EditorPrefs.SetInt(Key + "Seed", value.Seed);
                 EditorPrefs.SetFloat(Key + "Size", value.Size);
                 EditorPrefs.SetFloat(Key + "ColorVariation", value.ColorVariation);
+                EditorPrefs.SetFloat(Key + "FoliageDetail", value.FoliageDetail);
             }
         }
 
@@ -156,6 +158,8 @@ namespace Greenhaven.Editor.AssetGenerator
             }
             settings.Size = EditorGUILayout.Slider(new GUIContent("Size", "Overall scale multiplier."), settings.Size, 0.5f, 2f);
             settings.ColorVariation = EditorGUILayout.Slider(new GUIContent("Color Variation", "Per-asset and per-face colour spread."), settings.ColorVariation, 0f, 1f);
+            settings.FoliageDetail = EditorGUILayout.Slider(new GUIContent("Foliage Detail",
+                "Tree canopy cluster count and smoothness. ~0.5 for entry-level phones, 0.8 default, 1 = full."), settings.Detail, 0.3f, 1f);
 
             foreach (IGrouping<string, IAssetGenerator> group in Generators.All.GroupBy(g => g.Group))
             {
