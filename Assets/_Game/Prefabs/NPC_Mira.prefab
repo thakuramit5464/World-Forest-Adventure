@@ -28,7 +28,7 @@ Transform:
   m_GameObject: {fileID: 659697901523167563}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0.9848078, z: 0, w: -0.17364821}
-  m_LocalPosition: {x: 3.5, y: 0, z: -0.5}
+  m_LocalPosition: {x: 2.3, y: 0, z: -2.1}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -73,12 +73,14 @@ MonoBehaviour:
   speakerName: Mira
   promptVerb: Talk to
   lines:
-  - Hello again, traveller! The well behind me is the heart of our little plaza.
+  - Hello again, traveller! The well behind me is the heart of our little square.
   dialogueView: {fileID: 0}
   interactionPoint: {fileID: 0}
   faceInteractor: 1
   talkAnimator: {fileID: 0}
   questGiver: {fileID: 0}
+  landmarkId: 
+  questManager: {fileID: 0}
 --- !u!114 &4786729429985983049
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -96,10 +98,10 @@ MonoBehaviour:
   npcId: mira
   offerLines:
   - Oh! A new face in Greenhaven. Welcome, traveller!
-  - Could you help me? Three supply crates fell off my cart somewhere along the forest trail.
-  - Rowan swears one rolled all the way up Lookout Hill, east of here. Bring them back and I'll bake you something special!
+  - 'Could you help me? Three supply crates fell off my cart on the trail north: one just past the bridge, the others in the Whispering Forest beyond the gate.'
+  - Bring them back and I'll bake you something special!
   activeLines:
-  - Any luck with the crates? Try the trail north... and the top of Lookout Hill.
+  - Any luck with the crates? Follow the road north over the bridge, then through the forest gate.
   completeLines:
   - You found all three! Greenhaven owes you one, explorer.
   - Here, still-warm honey bread. Oh, and Elder Rowan was asking for you. He's on the bench by his house.

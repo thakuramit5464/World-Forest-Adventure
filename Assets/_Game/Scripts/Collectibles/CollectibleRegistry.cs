@@ -1,26 +1,27 @@
 using System;
 using System.Collections.Generic;
+using Greenhaven.Core;
 using UnityEngine;
 
 namespace Greenhaven.Collectibles
 {
     /// <summary>
-    /// Scene-level owner of collection state. Collectibles register here so the HUD
-    /// knows totals (e.g. 1/3), and report pickups so duplicates are rejected.
+    /// Scene-side view of the player's collected items. The record itself lives in
+    /// <see cref="GameProgress"/> (shared across scenes and saved); this component registers the scene's
+    /// collectibles (for totals and duplicate-ID checks) and raises events when something is picked up.
     /// </summary>
     public sealed class CollectibleRegistry : MonoBehaviour
     {
-        readonly CollectedItems collected = new CollectedItems();
         readonly Dictionary<string, int> totalsByType = new Dictionary<string, int>();
         readonly HashSet<string> registeredIds = new HashSet<string>();
+        CollectedItems collected;
 
-        /// <summary>Raised after a successful pickup: (itemType, collectedCount, total).</summary>
+        /// <summary>(item type, held count, total of that type in this scene).</summary>
         public event Action<string, int, int> Collected;
 
-        /// <summary>Raised when totals change as collectibles register.</summary>
         public event Action<string> TotalsChanged;
 
-        public CollectedItems State => collected;
+        public CollectedItems State => collected ??= GameProgress.Instance.Items;
 
         public int TotalOf(string itemType) =>
             itemType != null && totalsByType.TryGetValue(itemType, out int n) ? n : 0;
@@ -44,8 +45,9 @@ namespace Greenhaven.Collectibles
 
         public bool TryCollect(string collectibleId, string itemType)
         {
-            if (!collected.TryCollect(collectibleId, itemType)) return false;
-            Collected?.Invoke(itemType, collected.CountOf(itemType), TotalOf(itemType));
+            if (!State.TryCollect(collectibleId, itemType)) return false;
+            GameProgress.Instance.Save();
+            Collected?.Invoke(itemType, State.CountOf(itemType), TotalOf(itemType));
             return true;
         }
     }

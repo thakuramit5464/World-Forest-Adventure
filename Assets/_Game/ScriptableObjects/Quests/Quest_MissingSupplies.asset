@@ -14,14 +14,14 @@ MonoBehaviour:
   m_EditorClassIdentifier: Greenhaven::Greenhaven.Quests.QuestDefinition
   questId: missing_supplies
   title: The Missing Supplies
-  summary: Mira's supply crates fell off her cart along the forest trail.
+  summary: Mira's supply crates fell off her cart along the trail north of the village.
   prerequisite: {fileID: 0}
   steps:
-  - description: Find the missing supply crates
+  - description: Find the missing supply crates along the trail north
     type: 0
     targetId: supply
     requiredCount: 3
-  - description: Bring the supplies back to Mira
+  - description: Bring the supplies back to Mira by the well
     type: 1
     targetId: mira
     requiredCount: 1

@@ -43,6 +43,7 @@ namespace Greenhaven.World
             }
             used = true;
             PendingArrival = arrivalId;
+            Greenhaven.Core.GameProgress.Instance.RecordScene(targetScene, arrivalId);
             ScreenFader.LoadScene(targetScene);
         }
     }

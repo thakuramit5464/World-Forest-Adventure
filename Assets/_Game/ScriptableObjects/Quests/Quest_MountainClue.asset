@@ -1,0 +1,31 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 81d53b96899f0934c9051150fea62b00, type: 3}
+  m_Name: Quest_MountainClue
+  m_EditorClassIdentifier: Greenhaven::Greenhaven.Quests.QuestDefinition
+  questId: mountain_clue
+  title: The Mountain Clue
+  summary: Rowan's old map marks a shrine on the summit of Cloudpeak. Its carving holds a clue.
+  prerequisite: {fileID: 11400000, guid: 34dbaa4e545bcba4dbb641b079124a90, type: 2}
+  steps:
+  - description: Climb to the summit of Cloudpeak and inspect the shrine
+    type: 2
+    targetId: summit_shrine
+    requiredCount: 1
+  - description: Light the three cairns in the order the carving shows
+    type: 2
+    targetId: cairn_puzzle
+    requiredCount: 1
+  - description: Tell Rowan what the cairns revealed
+    type: 1
+    targetId: rowan
+    requiredCount: 1

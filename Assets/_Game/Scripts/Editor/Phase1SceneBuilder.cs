@@ -637,7 +637,7 @@ namespace Greenhaven.Editor
         }
 
         /// <summary>Quest-specific dialogue for an NPC quest giver.</summary>
-        sealed class QuestLines
+        internal sealed class QuestLines
         {
             public QuestDefinition Quest;
             public string[] Offer, Active, Complete, Done;
@@ -647,7 +647,12 @@ namespace Greenhaven.Editor
         const float RowanSeatForwardOffset = 0.1f;
 
         static void BuildNpc(DialogueView dialogue, string speaker, Vector3 position, float yaw, string skin,
-            string idleClip, string talkClip, QuestManager quests, QuestLines questLines, params string[] lines)
+            string idleClip, string talkClip, QuestManager quests, QuestLines questLines, params string[] lines) =>
+            BuildNpc(dialogue, speaker, position, yaw, skin, idleClip, talkClip, quests, questLines != null ? new[] { questLines } : new QuestLines[0], lines);
+
+        /// <summary>An NPC (prefab NPC_{speaker}, reused across scenes) with its default lines and any number of quests, in priority order.</summary>
+        internal static GameObject BuildNpc(DialogueView dialogue, string speaker, Vector3 position, float yaw, string skin,
+            string idleClip, string talkClip, QuestManager quests, QuestLines[] questSet, params string[] lines)
         {
             var npc = new GameObject("NPC_" + speaker);
             npc.transform.SetPositionAndRotation(position, Quaternion.Euler(0f, yaw, 0f));
@@ -678,10 +683,10 @@ namespace Greenhaven.Editor
             SetStrings(so.FindProperty("lines"), lines);
             so.ApplyModifiedPropertiesWithoutUndo();
 
-            QuestGiver giver = null;
-            if (questLines != null && questLines.Quest != null)
+            foreach (QuestLines questLines in questSet)
             {
-                giver = npc.AddComponent<QuestGiver>();
+                if (questLines == null || questLines.Quest == null) continue;
+                QuestGiver giver = npc.AddComponent<QuestGiver>();
                 var gso = new SerializedObject(giver);
                 gso.FindProperty("quest").objectReferenceValue = questLines.Quest;
                 gso.FindProperty("npcId").stringValue = speaker.ToLowerInvariant();
@@ -696,11 +701,10 @@ namespace Greenhaven.Editor
             // Scene references applied as instance overrides (prefab assets cannot reference scene objects).
             SetRef(instance.GetComponent<DialogueInteractable>(), "dialogueView", dialogue);
             if (animator != null) SetRef(instance.GetComponent<DialogueInteractable>(), "talkAnimator", animator);
-            if (giver != null)
-            {
-                SetRef(instance.GetComponent<QuestGiver>(), "manager", quests);
-                SetRef(instance.GetComponent<DialogueInteractable>(), "questGiver", instance.GetComponent<QuestGiver>());
-            }
+            QuestGiver[] givers = instance.GetComponents<QuestGiver>();
+            foreach (QuestGiver g in givers) SetRef(g, "manager", quests);
+            if (givers.Length > 0) SetRef(instance.GetComponent<DialogueInteractable>(), "questGiver", givers[0]);
+            return instance;
         }
 
         // ───────────────────────────── Quests ─────────────────────────────
@@ -709,26 +713,11 @@ namespace Greenhaven.Editor
 
         static QuestManager BuildQuests(CollectibleRegistry registry, out QuestDefinition supplies, out QuestDefinition request)
         {
-            EnsureFolder(QuestFolder);
-            supplies = QuestAsset("Quest_MissingSupplies", q => q.Configure("missing_supplies", "The Missing Supplies",
-                "Mira's supply crates fell off her cart along the forest trail.", null,
-                new QuestStep("Find the missing supply crates", ObjectiveType.Collect, "supply", 3),
-                new QuestStep("Bring the supplies back to Mira", ObjectiveType.TalkTo, "mira")));
-            QuestDefinition suppliesRef = supplies;
-            request = QuestAsset("Quest_VillagersRequest", q => q.Configure("villagers_request", "A Villager's Request",
-                "Elder Rowan lost his spectacles near the Great Old Oak.", suppliesRef,
-                new QuestStep("Find Rowan's spectacles near the Great Old Oak", ObjectiveType.Collect, "spectacles"),
-                new QuestStep("Return the spectacles to Rowan", ObjectiveType.TalkTo, "rowan")));
-
-            QuestManager manager = new GameObject("QuestManager").AddComponent<QuestManager>();
-            var so = new SerializedObject(manager);
-            SerializedProperty list = so.FindProperty("quests");
-            list.arraySize = 2;
-            list.GetArrayElementAtIndex(0).objectReferenceValue = supplies;
-            list.GetArrayElementAtIndex(1).objectReferenceValue = request;
-            so.FindProperty("registry").objectReferenceValue = registry;
-            so.ApplyModifiedPropertiesWithoutUndo();
-            return manager;
+            // Definitions are shared with the village and Cloudpeak builders (this region is now a demo).
+            Quests.GreenhavenQuests.Set set = Quests.GreenhavenQuests.Ensure();
+            supplies = set.Supplies;
+            request = set.Request;
+            return Quests.GreenhavenQuests.AddManager(registry, supplies, request);
         }
 
         internal static QuestDefinition QuestAsset(string fileName, System.Action<QuestDefinition> configure)
@@ -755,7 +744,7 @@ namespace Greenhaven.Editor
             SupplyCrate(group, registry, "supply_03", new Vector3(23.5f, 2.5f, 19.5f));
         }
 
-        static void SupplyCrate(Transform parent, CollectibleRegistry registry, string id, Vector3 position)
+        internal static void SupplyCrate(Transform parent, CollectibleRegistry registry, string id, Vector3 position)
         {
             CollectibleProp(parent, registry, id, "supply", "Supply Crate", position, 0.45f, visual =>
             {
@@ -765,10 +754,12 @@ namespace Greenhaven.Editor
             });
         }
 
-        static void BuildSpectacles(CollectibleRegistry registry)
+        static void BuildSpectacles(CollectibleRegistry registry) => Spectacles(null, registry, new Vector3(-17.4f, 0f, 27.2f)); // demo region: by the Great Old Oak
+
+        /// <summary>Rowan's spectacles (oversized so they read at phone scale).</summary>
+        internal static void Spectacles(Transform parent, CollectibleRegistry registry, Vector3 position)
         {
-            // "A Villager's Request": by the roots of the Great Old Oak. Oversized so they read at phone scale.
-            CollectibleProp(null, registry, "spectacles_01", "spectacles", "Rowan's Spectacles", new Vector3(-17.4f, 0f, 27.2f), 0.5f, visual =>
+            CollectibleProp(parent, registry, "spectacles_01", "spectacles", "Rowan's Spectacles", position, 0.5f, visual =>
             {
                 Quaternion lens = Quaternion.Euler(90f, 0f, 0f);
                 LocalPrim(PrimitiveType.Cylinder, "LensL", visual, new Vector3(-0.2f, 0f, 0f), new Vector3(0.3f, 0.02f, 0.3f), "Water", collider: false, rotation: lens);

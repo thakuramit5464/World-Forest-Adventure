@@ -5,7 +5,6 @@ namespace Greenhaven.Quests
 {
     public enum QuestState { NotStarted, Active, Completed }
 
-    /// <summary>Plain-data progress for one quest (serializable for saving later).</summary>
     [Serializable]
     public sealed class QuestProgress
     {
@@ -15,21 +14,31 @@ namespace Greenhaven.Quests
     }
 
     /// <summary>
-    /// Mutable quest progress keyed by quest id. Pure logic with no scene dependencies,
-    /// so it is unit-testable and maps directly onto save data.
+    /// Pure quest progress keyed by quest id (no Unity dependencies, unit-tested). Lives in
+    /// <see cref="Greenhaven.Core.GameProgress"/> so it is shared by every scene and saved.
     /// </summary>
     public sealed class QuestLog
     {
         readonly Dictionary<string, QuestProgress> progress = new Dictionary<string, QuestProgress>();
 
+        /// <summary>Every known quest's progress, for saving.</summary>
+        public IEnumerable<KeyValuePair<string, QuestProgress>> Entries => progress;
+
         public QuestState StateOf(QuestDefinition quest) =>
             quest != null && progress.TryGetValue(quest.QuestId, out QuestProgress p) ? p.State : QuestState.NotStarted;
 
-        /// <summary>Progress for an active or completed quest, or null if not started.</summary>
         public QuestProgress Get(QuestDefinition quest) =>
             quest != null && progress.TryGetValue(quest.QuestId, out QuestProgress p) ? p : null;
 
-        /// <summary>Starts a quest. Returns false if it is invalid or already started/completed.</summary>
+        /// <summary>Puts back saved progress (ignores empty ids).</summary>
+        public void Restore(string questId, QuestState state, int stepIndex, int count)
+        {
+            if (string.IsNullOrEmpty(questId)) return;
+            progress[questId] = new QuestProgress { State = state, StepIndex = Math.Max(0, stepIndex), Count = Math.Max(0, count) };
+        }
+
+        public void Clear() => progress.Clear();
+
         public bool Start(QuestDefinition quest)
         {
             if (quest == null || string.IsNullOrEmpty(quest.QuestId) || StateOf(quest) != QuestState.NotStarted) return false;
@@ -39,14 +48,12 @@ namespace Greenhaven.Quests
             return true;
         }
 
-        /// <summary>
-        /// Reports an event objective (TalkTo/Inspect). Advances only if it matches the CURRENT step.
-        /// Returns true if progress changed.
-        /// </summary>
+        /// <summary>Reports a TalkTo/Inspect event. Returns true if it advanced the current step's count.</summary>
         public bool Report(QuestDefinition quest, ObjectiveType type, string targetId)
         {
             QuestProgress p = Get(quest);
             if (p == null || p.State != QuestState.Active || type == ObjectiveType.Collect) return false;
+            if (p.StepIndex >= quest.StepCount) return false; // older save with a step that no longer exists
             QuestStep step = quest.GetStep(p.StepIndex);
             if (step.Type != type || step.TargetId != targetId) return false;
 
@@ -55,17 +62,14 @@ namespace Greenhaven.Quests
             return true;
         }
 
-        /// <summary>
-        /// Re-evaluates Collect steps against how many of each item the player has
-        /// (so items picked up before the quest started still count). Returns true if progress changed.
-        /// </summary>
+        /// <summary>Re-evaluates Collect steps against held counts (so items found before the quest still count).</summary>
         public bool Refresh(QuestDefinition quest, Func<string, int> countOf)
         {
             QuestProgress p = Get(quest);
             if (p == null || countOf == null) return false;
 
             bool changed = false;
-            while (p.State == QuestState.Active)
+            while (p.State == QuestState.Active && p.StepIndex < quest.StepCount)
             {
                 QuestStep step = quest.GetStep(p.StepIndex);
                 if (step.Type != ObjectiveType.Collect) break;
@@ -89,7 +93,7 @@ namespace Greenhaven.Quests
             p.Count = 0;
             if (p.StepIndex >= quest.StepCount)
             {
-                p.StepIndex = quest.StepCount - 1;
+                p.StepIndex = Math.Max(0, quest.StepCount - 1);
                 p.State = QuestState.Completed;
             }
         }

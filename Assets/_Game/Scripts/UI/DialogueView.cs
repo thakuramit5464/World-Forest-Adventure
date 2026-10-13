@@ -124,7 +124,8 @@ namespace Greenhaven.UI
 
         void OnTargetChanged(IInteractable target)
         {
-            if (IsOpen && !ReferenceEquals(target, owner)) Hide();
+            // Walking away from the speaker closes the conversation; messages from non-targets (e.g. a puzzle) stay until dismissed.
+            if (IsOpen && owner is IInteractable && !ReferenceEquals(target, owner)) Hide();
         }
     }
 }

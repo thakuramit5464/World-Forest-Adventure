@@ -135,7 +135,7 @@ namespace Greenhaven.Editor.VillageScene
             // 5. Buildings, square, road furniture, gardens, exit, stream blockers, boundaries.
             PlaceBuildings(buildings, layout);
             PlaceHouse(buildings);
-            DialogueView dialogue = BuildGameplay(out GameObject player);
+            DialogueView dialogue = BuildGameplay(out GameObject player, out QuestManager quests, out CollectibleRegistry registry);
             WorldTools.WorldLinkSetup.AddToVillage(p => Height(p.x, p.y)); // north gate → Cloudpeak, and the arrival back
             BuildSquare(props, layout, dialogue);
             BuildRoad(props, layout, dialogue);
@@ -146,6 +146,7 @@ namespace Greenhaven.Editor.VillageScene
             BuildStreamBlockers(env);
             BuildBoundaries(env);
             BuildHangingSign(props, layout, dialogue);
+            BuildVillagers(props, layout, dialogue, quests, registry);
 
             // 6. Vegetation from the existing nature generators.
             BuildVegetation(vegetation, layout, treeDensity);
@@ -411,16 +412,67 @@ namespace Greenhaven.Editor.VillageScene
 
         // ───────────────────────────── Gameplay objects ─────────────────────────────
 
-        static DialogueView BuildGameplay(out GameObject player)
+        static DialogueView BuildGameplay(out GameObject player, out QuestManager quests, out CollectibleRegistry registry)
         {
             player = Phase1SceneBuilder.BuildPlayer(OnGround(SpawnXZ, 0.05f));
             Phase1SceneBuilder.BuildCamera(player);
             WeatherTools.WeatherSetup.AddToScene();
             WindTools.WindSetup.AddToScene();
-            var registry = new GameObject("CollectibleRegistry").AddComponent<CollectibleRegistry>();
-            var quests = new GameObject("QuestManager").AddComponent<QuestManager>();
-            Phase1SceneBuilder.SetRef(quests, "registry", registry);
+            registry = new GameObject("CollectibleRegistry").AddComponent<CollectibleRegistry>();
+            // All four MVP quests are listed here so the tracker shows whichever is active, wherever it was started.
+            Greenhaven.Editor.Quests.GreenhavenQuests.Set set = Greenhaven.Editor.Quests.GreenhavenQuests.Ensure();
+            quests = Greenhaven.Editor.Quests.GreenhavenQuests.AddManager(registry, set.All);
             return Phase1SceneBuilder.BuildHud(player, quests);
+        }
+
+        // ───────────────────────────── Villagers and quest items ─────────────────────────────
+
+        /// <summary>Mira by the well, Rowan on a bench beside his house, and the first supply crate past the bridge.</summary>
+        static void BuildVillagers(Transform parent, VillageLayout layout, DialogueView dialogue, QuestManager quests, CollectibleRegistry registry)
+        {
+            Greenhaven.Editor.Quests.GreenhavenQuests.Set set = Greenhaven.Editor.Quests.GreenhavenQuests.Ensure();
+            Transform group = Group("Villagers", parent);
+
+            var miraAt = new Vector2(2.3f, -2.1f);
+            GameObject mira = Phase1SceneBuilder.BuildNpc(dialogue, "Mira", OnGround(miraAt), 200f, "miraSkin", "Idle_Loop", "Idle_Talking_Loop", quests,
+                new[] { Greenhaven.Editor.Quests.GreenhavenQuests.MiraSupplies(set.Supplies) },
+                "Hello again, traveller! The well behind me is the heart of our little square.");
+            mira.transform.SetParent(group, true);
+            layout.AddKeepClear(miraAt, 1.2f);
+
+            // Rowan's bench: beside the Elder's House, near its front, on whichever side is free.
+            Obb house = layout.Footprints.First(f => f.name == "Elder's House").box;
+            Vector2? benchAt = null;
+            foreach (float side in new[] { 1f, -1f })
+            {
+                foreach (float back in new[] { 0.9f, 1.8f })
+                {
+                    Vector2 p = house.ToWorld(side * (house.HalfSize.x + 1.1f), house.HalfSize.y - back);
+                    var box = new Obb(p, new Vector2(0.9f, 0.35f), house.Yaw);
+                    if (!layout.IsFree(box, 0.5f)) continue;
+                    benchAt = p;
+                    layout.AddFootprint(box, "Rowan's bench");
+                    break;
+                }
+                if (benchAt.HasValue) break;
+            }
+            Vector2 at = benchAt ?? house.ToWorld(house.HalfSize.x + 1.5f, 0f);
+            float yaw = house.Yaw;
+            Place(Prefab(AssetCategory.Bench, 0), group, OnGround(at), yaw);
+            Vector3 seat = OnGround(at) + Quaternion.Euler(0f, yaw, 0f) * new Vector3(0f, 0f, 0.1f);
+            GameObject rowan = Phase1SceneBuilder.BuildNpc(dialogue, "Rowan", seat, yaw, "elderSkin", "Sitting_Idle_Loop", "Sitting_Talking_Loop", quests,
+                new[] { Greenhaven.Editor.Quests.GreenhavenQuests.RowanRequest(set.Request), Greenhaven.Editor.Quests.GreenhavenQuests.RowanMountainClue(set.MountainClue) },
+                "Ah, young explorer. I am Rowan, elder of Greenhaven.",
+                "When I was your age I climbed all the way to Cloudpeak. The view... you never forget it.",
+                "Mira looks worried about something. Have you spoken to her by the well?");
+            rowan.transform.SetParent(group, true);
+            layout.AddKeepClear(at, 1.4f);
+
+            // Quest 1's first crate: just past the bridge, beside the north road (the other two are in the forest).
+            var crateAt = new Vector2(-2.6f, 23.2f);
+            Phase1SceneBuilder.SupplyCrate(group, registry, "supply_01", OnGround(crateAt));
+            layout.AddKeepClear(crateAt, 1f);
+            log.AppendLine($"Villagers: Mira by the well, Rowan on a bench by the Elder's House ({(benchAt.HasValue ? "free spot" : "fallback spot")}); supply crate 1 past the bridge.");
         }
 
         static void Readable(GameObject sign, DialogueView dialogue, params string[] lines)

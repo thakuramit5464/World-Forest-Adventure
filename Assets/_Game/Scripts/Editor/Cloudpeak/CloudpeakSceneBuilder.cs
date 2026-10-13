@@ -5,6 +5,8 @@ using System.Text;
 using Greenhaven.Collectibles;
 using Greenhaven.Editor.AssetGenerator;
 using Greenhaven.Editor.WindTools;
+using Greenhaven.Interaction;
+using Greenhaven.Puzzles;
 using Greenhaven.Player;
 using Greenhaven.Quests;
 using Greenhaven.UI;
@@ -45,6 +47,7 @@ namespace Greenhaven.Editor.Cloudpeak
         static readonly List<(Vector2 p, float r)> reserved = new List<(Vector2, float)>();
         static readonly List<GameObject> walkable = new List<GameObject>();
         static Vector3 summitMarker;
+        static QuestManager questManager;
         static Greenhaven.Environment.RiverFlowController brook;
 
         // ───────────────────────────── Entry point ─────────────────────────────
@@ -353,17 +356,10 @@ namespace Greenhaven.Editor.Cloudpeak
             WindSetup.AddToScene();
             registry = new GameObject("CollectibleRegistry").AddComponent<CollectibleRegistry>();
 
-            Phase1SceneBuilder.EnsureFolder(Phase1SceneBuilder.QuestFolder);
-            QuestDefinition feathers = Phase1SceneBuilder.QuestAsset("Quest_CloudFeathers", q => q.Configure("cloud_feathers", "Feathers of Cloudpeak",
-                "Cloud feathers drift down the mountain. Gather them on the way to the summit.", null,
-                new QuestStep("Gather the cloud feathers along the Cloudpeak Trail", ObjectiveType.Collect, "cloud_feather", FeatherCount)));
-            var quests = new GameObject("QuestManager").AddComponent<QuestManager>();
-            var so = new SerializedObject(quests);
-            SerializedProperty list = so.FindProperty("quests");
-            list.arraySize = 1;
-            list.GetArrayElementAtIndex(0).objectReferenceValue = feathers;
-            so.FindProperty("registry").objectReferenceValue = registry;
-            so.ApplyModifiedPropertiesWithoutUndo();
+            Greenhaven.Editor.Quests.GreenhavenQuests.Set set = Greenhaven.Editor.Quests.GreenhavenQuests.Ensure();
+            QuestDefinition feathers = set.Feathers;
+            var quests = Greenhaven.Editor.Quests.GreenhavenQuests.AddManager(registry, set.Supplies, set.Request, set.MountainClue, feathers);
+            questManager = quests;
             QuestAutoStart starter = quests.gameObject.AddComponent<QuestAutoStart>();
             Phase1SceneBuilder.SetRef(starter, "manager", quests);
             Phase1SceneBuilder.SetRef(starter, "quest", feathers);
@@ -480,6 +476,9 @@ namespace Greenhaven.Editor.Cloudpeak
             Sign(glade, dialogue, gi - 6, -viewSide, "Whispering Glade — listen to the leaves.",
                 "Look north between the trees: the peak with the red banner is Cloudpeak, the end of the trail.");
             Feather(feathers, registry, 1, stumpAt + gd * 1.2f);
+            Vector2 crate2 = g + gSide * viewSide * 3.2f - gd * 2.4f;
+            Phase1SceneBuilder.SupplyCrate(glade, registry, "supply_02", world.OnSurface(crate2));
+            reserved.Add((crate2, 1f));
 
             // Bridge sign and a feather by a fallen log after the bridge.
             int bi = TrailIndexNear(world.BridgeCentre);
@@ -488,6 +487,9 @@ namespace Greenhaven.Editor.Cloudpeak
             Place(Prefab(AssetCategory.Log, 1), parent, world.OnSurface(afterLog, -0.08f), afterYaw + 90f);
             reserved.Add((afterLog, 1.8f));
             Feather(feathers, registry, 2, afterLog + (afterLog - trail[bi + 14].Position).normalized * 1.4f);
+            (Vector2 crate3, _) = BesideTrail(bi + 26, 1f, 1.9f);
+            Phase1SceneBuilder.SupplyCrate(parent, registry, "supply_03", world.OnSurface(crate3));
+            reserved.Add((crate3, 1f));
 
             // 2. Foothill Rest (rest stop at the start of the climb).
             Transform rest = Group("Foothill Rest", parent);
@@ -520,6 +522,9 @@ namespace Greenhaven.Editor.Cloudpeak
             Sign(ledge, dialogue, TrailIndexNear(world.Ledge) - 8, -1f, "Eagle Ledge — the Whispering Forest lies below.",
                 "From here the trail circles the summit cone on a ledge cut into the rock. Keep to the path.");
             Feather(feathers, registry, 4, ledgePl.Centre - new Vector2(-outward.y, outward.x) * 2.6f);
+            Vector2 spectaclesAt = ledgePl.Centre + outward * 0.4f + new Vector2(-outward.y, outward.x) * 1.7f;
+            Phase1SceneBuilder.Spectacles(ledge, registry, world.OnSurface(spectaclesAt));
+            reserved.Add((spectaclesAt, 1f));
 
             // 4. Summit: ruined arch on the final approach, shrine, cairn with a swinging banner, overlook wall.
             BuildSummit(Group("Cloudpeak Summit", parent), dialogue, feathers, registry);
@@ -546,8 +551,15 @@ namespace Greenhaven.Editor.Cloudpeak
             Mesh shrine = SaveOnce($"Gen_CloudpeakShrine_s{seed}", () => CloudpeakMeshes.Shrine(seed, $"Gen_CloudpeakShrine_s{seed}", out _));
             Object.DestroyImmediate(CloudpeakMeshes.Shrine(seed, "tmp", out Bounds shrineBox));
             GameObject shrineGo = Solid("Summit Shrine", parent, shrine, world.OnSurface(shrineAt, -0.05f), faceApproach + 180f, new[] { shrineBox });
-            AmbientMotionSetup.Readable(shrineGo, dialogue, "Cloudpeak Summit — you made it!",
-                "The whole Whispering Forest lies below, and Greenhaven Village beyond the trees. The wind always blows up here.");
+            AmbientMotionSetup.Readable(shrineGo, dialogue, "Cloudpeak Summit — you made it! The whole Whispering Forest lies below, and Greenhaven beyond the trees.",
+                "Three cairns stand around the summit: one toward the forest, one at the far edge, and one by the ruined arch.",
+                "Worn letters are carved into the stone: \"Light the forest first, then the edge, and last the arch.\"");
+            var shrineTalk = new SerializedObject(shrineGo.GetComponent<DialogueInteractable>());
+            shrineTalk.FindProperty("speakerName").stringValue = "Summit Shrine";
+            shrineTalk.FindProperty("promptVerb").stringValue = "Inspect";
+            shrineTalk.FindProperty("landmarkId").stringValue = Greenhaven.Editor.Quests.GreenhavenQuests.ShrineLandmark;
+            shrineTalk.FindProperty("questManager").objectReferenceValue = questManager;
+            shrineTalk.ApplyModifiedPropertiesWithoutUndo();
             reserved.Add((shrineAt, 1.8f));
 
             // Cairn with a tall flagpole and a banner that swings in the wind (visible from below).
@@ -582,6 +594,111 @@ namespace Greenhaven.Editor.Cloudpeak
                 Place(Prefab(AssetCategory.Rock, rng.Next(6)), parent, world.OnSurface(p, -0.25f), Rand(0f, 360f), Rand(0.8f, 1.4f));
             }
             Feather(feathers, registry, 5, shrineAt + across * 1.8f);
+            BuildCairnPuzzle(parent, dialogue, summit, c, forestAngle, arrivalAngle);
+        }
+
+        // ───────────────────────────── The Mountain Clue: cairn puzzle ─────────────────────────────
+
+        /// <summary>Three fire cairns around the plateau (forest side, far edge, by the arch) and a trail marker revealed when they are lit in order.</summary>
+        static void BuildCairnPuzzle(Transform parent, DialogueView dialogue, Platform summit, Vector2 c, float forestAngle, float arrivalAngle)
+        {
+            Transform group = Group("Cairn Puzzle", parent);
+            CairnPuzzle puzzle = group.gameObject.AddComponent<CairnPuzzle>();
+            Vector2 Spot(float angle)
+            {
+                foreach (float offset in new[] { 0f, 20f, -20f, 40f, -40f, 60f, -60f, 80f, -80f })
+                {
+                    float a = angle + offset * Mathf.Deg2Rad;
+                    Vector2 p = c + new Vector2(Mathf.Cos(a), Mathf.Sin(a)) * (summit.Radius - 2.6f);
+                    if (!IsReserved(p, 1.4f) && world.DistanceToTrailEdge(p) > 0.7f) return p;
+                }
+                return c + new Vector2(Mathf.Cos(angle), Mathf.Sin(angle)) * (summit.Radius - 2.6f);
+            }
+            float edgeAngle = forestAngle + Mathf.PI * 0.92f;
+            var cairns = new PuzzleCairn[3];
+            string[] names = { "Forest Cairn", "Edge Cairn", "Arch Cairn" };
+            float[] angles = { forestAngle, edgeAngle, arrivalAngle };
+            Vector2 edgeAt = Vector2.zero;
+            for (int i = 0; i < 3; i++)
+            {
+                Vector2 at = Spot(angles[i]);
+                if (i == 1) edgeAt = at;
+                reserved.Add((at, 1.2f));
+                cairns[i] = FireCairn(names[i], group, world.OnSurface(at, -0.04f), Rand(0f, 360f), puzzle);
+            }
+            // Revealed by the solved puzzle: an old trail marker at the far edge, pointing beyond the summit.
+            Vector2 markerAt = c + new Vector2(Mathf.Cos(edgeAngle), Mathf.Sin(edgeAngle)) * (summit.Radius - 0.9f);
+            GameObject marker = Place(Prefab(AssetCategory.Signpost, 1), group, world.OnSurface(markerAt, -0.1f), edgeAngle * -Mathf.Rad2Deg + 90f);
+            if (marker != null)
+            {
+                marker.name = "Lost Trail Marker (revealed)";
+                AmbientMotionSetup.Readable(marker, dialogue, "An old marker, uncovered by the firelight.",
+                    "Scratched into the wood: \"The Lost Trail — beyond the summit, where the clouds part.\" Rowan will want to hear of this.");
+                marker.SetActive(false);
+            }
+            var so = new SerializedObject(puzzle);
+            SerializedProperty order = so.FindProperty("order");
+            order.arraySize = 3;
+            for (int i = 0; i < 3; i++) order.GetArrayElementAtIndex(i).objectReferenceValue = cairns[i];
+            so.FindProperty("landmarkId").stringValue = Greenhaven.Editor.Quests.GreenhavenQuests.CairnLandmark;
+            so.FindProperty("questManager").objectReferenceValue = questManager;
+            so.FindProperty("dialogueView").objectReferenceValue = dialogue;
+            so.FindProperty("reveal").objectReferenceValue = marker;
+            so.ApplyModifiedPropertiesWithoutUndo();
+            log.AppendLine("Mountain Clue: shrine landmark, three fire cairns (forest → edge → arch) and the revealed trail marker on the summit.");
+        }
+
+        /// <summary>A stacked-stone cairn with a fire bowl and a flame child (shown when lit).</summary>
+        static PuzzleCairn FireCairn(string name, Transform parent, Vector3 position, float yaw, CairnPuzzle puzzle)
+        {
+            int seed = world.Settings.Seed;
+            Mesh body = SaveOnce($"Gen_CloudpeakFireCairn_s{seed}", () =>
+            {
+                var rng2 = new System.Random(seed ^ 0xF1AE);
+                var mb = new MeshBuilder();
+                float y = 0f;
+                for (int i = 0; i < 4; i++)
+                {
+                    float w = 0.95f - i * 0.17f, h = 0.2f + (float)rng2.NextDouble() * 0.06f;
+                    Shapes.Box(mb, new Vector3(((float)rng2.NextDouble() - 0.5f) * 0.06f, y + h * 0.5f, ((float)rng2.NextDouble() - 0.5f) * 0.06f),
+                        new Vector3(w, h, w * 0.92f), Quaternion.Euler(0f, (float)rng2.NextDouble() * 50f, 0f),
+                        n => VillagePalette.UV(VRamp.Stone, 3 + i % 2 + Palette.SlopeShade(n)));
+                    y += h * 0.95f;
+                }
+                // Fire bowl: a short, wide ring of dark stone with a charred inside.
+                Shapes.Loft(mb, Vector3.right, Vector3.forward, new[]
+                {
+                    new Shapes.Ring(new Vector3(0f, y - 0.02f, 0f), 0.3f, 0.3f, n => VillagePalette.UV(VRamp.Dark, 3)),
+                    new Shapes.Ring(new Vector3(0f, y + 0.16f, 0f), 0.36f, 0.36f, n => VillagePalette.UV(VRamp.Dark, 4)),
+                }, 8, false, true);
+                return mb.ToMesh($"Gen_CloudpeakFireCairn_s{seed}");
+            });
+            Mesh flameMesh = SaveOnce("Gen_CloudpeakFlame", () =>
+            {
+                var mb = new MeshBuilder();
+                Shapes.Frustum(mb, Vector3.zero, Vector3.up, 0.55f, 0.22f, 0.02f, 6, n => VillagePalette.UV(VRamp.Accent, 5 + (n.y > 0.3f ? 1 : 0)), true);
+                Shapes.Frustum(mb, new Vector3(0f, 0.04f, 0f), Vector3.up, 0.34f, 0.12f, 0.015f, 5, n => VillagePalette.UV(VRamp.Window, 7), true);
+                return mb.ToMesh("Gen_CloudpeakFlame");
+            });
+
+            GameObject go = Solid(name, parent, body, position, yaw, new[] { new Bounds(new Vector3(0f, 0.5f, 0f), new Vector3(0.9f, 1.0f, 0.9f)) });
+            GameObjectUtility.SetStaticEditorFlags(go, 0); // interactable: not static-batched
+            var flame = new GameObject("Flame");
+            flame.transform.SetParent(go.transform, false);
+            flame.transform.localPosition = new Vector3(0f, 0.95f, 0f);
+            flame.AddComponent<MeshFilter>().sharedMesh = flameMesh;
+            flame.AddComponent<MeshRenderer>().sharedMaterial = village;
+            SphereCollider trigger = go.AddComponent<SphereCollider>();
+            trigger.isTrigger = true;
+            trigger.center = new Vector3(0f, 0.7f, 0f);
+            trigger.radius = 0.9f;
+            PuzzleCairn cairn = go.AddComponent<PuzzleCairn>();
+            var so = new SerializedObject(cairn);
+            so.FindProperty("cairnName").stringValue = name;
+            so.FindProperty("puzzle").objectReferenceValue = puzzle;
+            so.FindProperty("flame").objectReferenceValue = flame.transform;
+            so.ApplyModifiedPropertiesWithoutUndo();
+            return cairn;
         }
 
         /// <summary>Low wall segments along an arc (radius around <paramref name="centre"/>), skipping any near <paramref name="gapAngle"/>.</summary>

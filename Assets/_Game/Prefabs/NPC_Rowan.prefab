@@ -12,6 +12,7 @@ GameObject:
   - component: {fileID: 7741430512741339601}
   - component: {fileID: 7222621971516274580}
   - component: {fileID: 3575623554127917267}
+  - component: {fileID: 411785061757829761}
   m_Layer: 0
   m_Name: NPC_Rowan
   m_TagString: Untagged
@@ -27,8 +28,8 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 3872528034411442879}
   serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0.92387956, z: 0, w: 0.38268346}
-  m_LocalPosition: {x: -7.8292894, y: 0, z: 11.229289}
+  m_LocalRotation: {x: 0, y: 0.9145143, z: 0, w: 0.4045536}
+  m_LocalPosition: {x: -14.390271, y: 0, z: 6.122041}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -81,6 +82,8 @@ MonoBehaviour:
   faceInteractor: 0
   talkAnimator: {fileID: 0}
   questGiver: {fileID: 0}
+  landmarkId: 
+  questManager: {fileID: 0}
 --- !u!114 &3575623554127917267
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -98,14 +101,39 @@ MonoBehaviour:
   npcId: rowan
   offerLines:
   - Mira tells me you're quite the finder of lost things!
-  - I dropped my spectacles while resting under the Great Old Oak, west of the village. Would you fetch them for an old man?
+  - Last spring I climbed Cloudpeak as far as the Eagle Ledge, and my spectacles fell from my pocket there. Would you fetch them for an old man?
   activeLines:
-  - My spectacles should be by the roots of the Great Old Oak. West of here, you can't miss it.
+  - The Eagle Ledge is halfway up the mountain, where the trail levels out. My spectacles should be by the bench.
   completeLines:
   - My spectacles! Now I can read the old map again...
-  - It shows a path up to Cloudpeak. When you're ready, we'll talk about the Mountain Clue.
+  - It marks a shrine at the very top of Cloudpeak. Let me look at it properly. Come back and talk to me again.
   doneLines:
-  - Cloudpeak awaits, explorer. That clue won't solve itself!
+  - The map is clearer now. Talk to me when you're ready for the summit.
+--- !u!114 &411785061757829761
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3872528034411442879}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e206e65ff0efd054d87db3a7b8a77fd0, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Greenhaven::Greenhaven.Quests.QuestGiver
+  manager: {fileID: 0}
+  quest: {fileID: 11400000, guid: eba0326cb1009d24e93f34f0cc4a969d, type: 2}
+  npcId: rowan
+  offerLines:
+  - 'Here: the map marks an old shrine on the summit, and three cairns around it.'
+  - Climb to the top, read what is carved on the shrine, and do as it says. Then come and tell me what you find.
+  activeLines:
+  - The shrine is at the summit, past the ruined arch. Read the carving carefully; the cairns must be lit in its order.
+  completeLines:
+  - The cairns lit, and marks on the rock... an old trail beyond the summit!
+  - So the Lost Trail is real. You've done Greenhaven a great service, explorer. Rest now; the mountain will keep its secret a little longer.
+  doneLines:
+  - The Lost Trail... one day we'll follow it together. For now, enjoy the village.
 --- !u!1 &7846459290245411506
 GameObject:
   m_ObjectHideFlags: 0

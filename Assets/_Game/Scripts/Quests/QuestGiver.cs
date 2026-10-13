@@ -3,9 +3,9 @@ using UnityEngine;
 namespace Greenhaven.Quests
 {
     /// <summary>
-    /// Lets an NPC offer, track and complete one quest through conversation. Chooses which
-    /// lines the NPC says based on quest state, and reports "talked to" for this NPC.
-    /// Used by <see cref="Interaction.DialogueInteractable"/> on the same GameObject.
+    /// Picks an NPC's lines for one quest by its state: offer (and start it), progress, completion, or
+    /// afterwards. An NPC can carry several of these (one per quest); <see cref="Greenhaven.Interaction.DialogueInteractable"/>
+    /// asks the one whose quest is active or ready to start first, then the finished ones.
     /// </summary>
     public sealed class QuestGiver : MonoBehaviour
     {
@@ -19,25 +19,29 @@ namespace Greenhaven.Quests
         [SerializeField, TextArea(2, 4), Tooltip("After completion. Empty = the NPC's normal lines.")]
         string[] doneLines;
 
+        public string NpcId => npcId;
+        public QuestDefinition Quest => quest;
+
+        /// <summary>True while this quest wants attention: it is running, or it can be offered now.</summary>
+        public bool IsCurrent => manager != null && quest != null && (manager.StateOf(quest) == QuestState.Active || manager.CanStart(quest));
+
         void Awake()
         {
             if (manager == null || quest == null)
                 Debug.LogWarning($"{nameof(QuestGiver)} on '{name}' needs a {nameof(QuestManager)} and a quest.", this);
         }
 
-        /// <summary>
-        /// Called when a conversation starts. Returns the lines to say, or null to use the
-        /// NPC's normal lines (e.g. when this quest is not yet available).
-        /// </summary>
-        public string[] BeginConversation()
+        /// <summary>Tells the quest system the player talked to this NPC (call once per conversation).</summary>
+        public void ReportTalk()
+        {
+            if (manager != null) manager.ReportTalk(npcId);
+        }
+
+        /// <summary>Lines for this quest given <paramref name="stateBeforeTalk"/>; null when it has nothing to say.</summary>
+        public string[] LinesFor(QuestState stateBeforeTalk)
         {
             if (manager == null || quest == null) return null;
-
-            QuestState before = manager.StateOf(quest);
-            // Report first: talking to this NPC may complete this quest's "return to" step (or another quest's).
-            manager.ReportTalk(npcId);
-
-            switch (before)
+            switch (stateBeforeTalk)
             {
                 case QuestState.NotStarted:
                     return manager.TryStart(quest) ? NonEmpty(offerLines) : null;
@@ -46,6 +50,16 @@ namespace Greenhaven.Quests
                 default:
                     return NonEmpty(doneLines);
             }
+        }
+
+        public QuestState StateNow => manager != null ? manager.StateOf(quest) : QuestState.NotStarted;
+
+        /// <summary>Single-quest convenience (report, then pick lines).</summary>
+        public string[] BeginConversation()
+        {
+            QuestState before = StateNow;
+            ReportTalk();
+            return LinesFor(before);
         }
 
         static string[] NonEmpty(string[] lines) => lines != null && lines.Length > 0 ? lines : null;

@@ -14,10 +14,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: Greenhaven::Greenhaven.Quests.QuestDefinition
   questId: villagers_request
   title: A Villager's Request
-  summary: Elder Rowan lost his spectacles near the Great Old Oak.
+  summary: Elder Rowan dropped his spectacles on the Eagle Ledge, halfway up Cloudpeak.
   prerequisite: {fileID: 11400000, guid: 772fddb8a45cc924798496c0f2d1add1, type: 2}
   steps:
-  - description: Find Rowan's spectacles near the Great Old Oak
+  - description: Find Rowan's spectacles on the Eagle Ledge
     type: 0
     targetId: spectacles
     requiredCount: 1

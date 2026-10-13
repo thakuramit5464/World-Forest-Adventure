@@ -52,8 +52,8 @@ Legend: `[x]` done and verified · `[~]` implemented and compiles, Play-mode/dev
 - [~] Implement quest states and objective progress. — `QuestLog` (pure, EditMode-tested): NotStarted/Active/Completed, sequential steps, prerequisites via `QuestManager`.
 - [~] Implement collect-item objective. — Counts held items, so pickups made before the quest started still count.
 - [~] Implement talk-to-NPC objective. — `QuestGiver` on NPCs; counts only when it is the current step.
-- [ ] Implement inspect-landmark objective. — Supported in `QuestLog`/`QuestManager.ReportInspect`; no landmark interactable yet (needed for mission 3).
-- [ ] Build the three MVP missions. — 2 of 3: The Missing Supplies (Mira) and A Villager's Request (Rowan, unlocks after the first). The Mountain Clue is pending its puzzle.
+- [~] Implement inspect-landmark objective. — `DialogueInteractable` with a landmark id (the summit shrine) and the solved cairn puzzle both report Inspect objectives.
+- [~] Build the three MVP missions. — All three defined in `GreenhavenQuests` and placed: supplies (village road + forest), spectacles (Eagle Ledge), The Mountain Clue (summit shrine + cairn puzzle). Play-test pending.
 - [~] Add mission start, progress, and completion UI. — `QuestToastView` banner ("New Quest" / "Quest Complete!") plus the tracker.
 
 **Exit criteria:** all three missions can be completed in a predictable sequence.
@@ -61,19 +61,19 @@ Legend: `[x]` done and verified · `[~]` implemented and compiles, Play-mode/dev
 ## Phase 5 — NPCs and world flow
 - [~] Add at least two interactable NPCs. — Mira (standing, idle/talking) and Elder Rowan (sitting on a bench, idle/talking), plus a readable signpost.
 - [~] Add dialogue UI with short text. — `DialogueView`.
-- [ ] Add the village start point.
-- [ ] Connect village, forest, and mountain trail.
+- [~] Add the village start point. — The village is the build's start scene; Mira and Rowan live there.
+- [~] Connect village, forest, and mountain trail. — Linked scenes via the north gate; progress carries across.
 - [ ] Add one route/landmark unlocked by progress.
 - [ ] Check that mission objectives are understandable without external instructions.
 
 **Exit criteria:** the region supports a complete short adventure loop.
 
 ## Phase 6 — Save/load and offline validation
-- [ ] Define versioned save DTOs.
-- [ ] Persist quest states and objective counts.
-- [ ] Persist collected stable IDs and unlock state.
+- [~] Define versioned save DTOs. — `SaveData` v1, `SaveSerializer` (tested).
+- [~] Persist quest states and objective counts. — `GameProgress` saves on every change.
+- [~] Persist collected stable IDs and unlock state. — IDs with types, plus puzzle/landmark flags.
 - [ ] Restore player position safely.
-- [ ] Handle missing, malformed, and older save data.
+- [~] Handle missing, malformed, and older save data. — Missing/broken → fresh game; newer version read as far as understood; stale step indices ignored (tests).
 - [ ] Test app restart and airplane mode.
 - [ ] Test app pause/resume and Android back navigation.
 
@@ -115,7 +115,7 @@ Legend: `[x]` done and verified · `[~]` implemented and compiles, Play-mode/dev
 - [~] Expressive layer: blinking, look-at toward interaction targets, backpack sway, turn-to-target on interact.
 - [~] Character Test scene for inspection before the main scenes use v2.
 - [ ] Owner review of hero v2 in the Character Test scene, then rebuild the village/region to adopt it.
-- [ ] Move Mira, Rowan and the quests into the village layout (currently only in `GreenhavenRegion`).
+- [~] Move Mira, Rowan and the quests into the village layout. — Done in `VillageSceneBuilder.BuildVillagers`; owner play-test pending.
 - [ ] Device profiling of the village scene.
 - [ ] Decide whether generated assets replace or complement the Quaternius props in `GreenhavenRegion` (needs owner approval before changing the main scene).
 
@@ -148,7 +148,7 @@ Legend: `[x]` done and verified · `[~]` implemented and compiles, Play-mode/dev
 - [ ] Owner play-test: walk entrance → summit with keyboard and touch controls; check the camera on the spiral ledge and at the hairpins.
 - [x] Tune extreme settings: default plus 12 other combinations pass the in-memory trail checks.
 - [~] Scene flow: linked scenes (SceneGate, SceneArrival, ScreenFader); village north gate ↔ Cloudpeak entrance; build list with the village first. Owner play-test pending.
-- [ ] Carry collectibles and quest progress across scenes (with save/load, Phase 6).
+- [~] Carry collectibles and quest progress across scenes. — `GameProgress`; owner check: collect in Cloudpeak, return to the village, restart the Editor.
 - [ ] Android profiling of CloudpeakAdventure (triangles in view, batches, LOD culling distances, terrain grid size).
 - [x] Removed the temporary `CloudpeakDiagnostics` editor hook.
 
@@ -183,3 +183,8 @@ Legend: `[x]` done and verified · `[~]` implemented and compiles, Play-mode/dev
 - [~] Themed HUD sprites and builder, floating joystick with run ring, icon buttons with feedback, look inertia, device-aware touch control visibility and key hints, camera auto-recentre and run FOV, dialogue typewriter. Compile and Editor preview pending.
 - [ ] Owner play-test on desktop (keyboard hides touch controls; E prompt; camera recentring feel) and on a phone or the Device Simulator (floating stick, run ring, look flicks).
 - [ ] Settings later: look sensitivity, invert Y, always-show controls, left-handed layout.
+
+## Core loop (2026-10-13)
+- [ ] Owner play-through: Mira → crate past the bridge → forest gate → two forest crates → back to Mira → Rowan → Eagle Ledge spectacles → Rowan twice → summit shrine → cairns (forest, edge, arch) → marker → Rowan. Check the tracker text and banners at each step, and that progress survives leaving a scene and restarting Play.
+- [ ] Restore the player's position on Continue (saved scene/arrival exist; needs a title screen with Continue / New Game).
+- [ ] Mission 3 reward and a hook for the next chapter (the Lost Trail).

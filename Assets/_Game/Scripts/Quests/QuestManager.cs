@@ -1,26 +1,28 @@
 using System;
 using Greenhaven.Collectibles;
+using Greenhaven.Core;
 using UnityEngine;
 
 namespace Greenhaven.Quests
 {
     /// <summary>
-    /// Scene owner of quest progress. Starts quests (respecting prerequisites), listens for
-    /// pickups, accepts talk/inspect reports, and raises events for the HUD.
+    /// Scene owner of quest logic: starts quests, routes TalkTo/Inspect events and item pickups to the shared
+    /// <see cref="QuestLog"/> in <see cref="GameProgress"/> (so progress carries between scenes and restarts),
+    /// and raises UI events. The quest list is per scene: the tracker shows the first active one.
     /// </summary>
     public sealed class QuestManager : MonoBehaviour
     {
-        [SerializeField, Tooltip("Quests in this region, in tracker priority order.")]
+        [SerializeField, Tooltip("Quests relevant in this scene, in tracker priority order.")]
         QuestDefinition[] quests = Array.Empty<QuestDefinition>();
         [SerializeField] CollectibleRegistry registry;
 
-        readonly QuestLog log = new QuestLog();
+        QuestLog log;
 
         public event Action<QuestDefinition> QuestStarted;
         public event Action<QuestDefinition> QuestProgressed;
         public event Action<QuestDefinition> QuestCompleted;
 
-        public QuestLog Log => log;
+        public QuestLog Log => log ??= GameProgress.Instance.Quests;
 
         void Awake()
         {
@@ -33,23 +35,31 @@ namespace Greenhaven.Quests
             if (registry != null) registry.Collected += OnCollected;
         }
 
+        void Start()
+        {
+            // Items picked up in another scene (or before a restart) may already satisfy a step.
+            foreach (QuestDefinition quest in quests)
+                if (quest != null && Log.StateOf(quest) == QuestState.Active && Log.Refresh(quest, CountOf)) Notify(quest);
+        }
+
         void OnDisable()
         {
             if (registry != null) registry.Collected -= OnCollected;
         }
 
-        public QuestState StateOf(QuestDefinition quest) => log.StateOf(quest);
+        public QuestState StateOf(QuestDefinition quest) => Log.StateOf(quest);
 
         public bool CanStart(QuestDefinition quest) =>
-            quest != null && log.StateOf(quest) == QuestState.NotStarted &&
-            (quest.Prerequisite == null || log.StateOf(quest.Prerequisite) == QuestState.Completed);
+            quest != null && Log.StateOf(quest) == QuestState.NotStarted &&
+            (quest.Prerequisite == null || Log.StateOf(quest.Prerequisite) == QuestState.Completed);
 
         public bool TryStart(QuestDefinition quest)
         {
-            if (!CanStart(quest) || !log.Start(quest)) return false;
+            if (!CanStart(quest) || !Log.Start(quest)) return false;
             QuestStarted?.Invoke(quest);
             // Items picked up before the quest began still count.
-            if (log.Refresh(quest, CountOf)) Notify(quest);
+            if (Log.Refresh(quest, CountOf)) Notify(quest);
+            GameProgress.Instance.Save();
             return true;
         }
 
@@ -61,9 +71,9 @@ namespace Greenhaven.Quests
         {
             foreach (QuestDefinition quest in quests)
             {
-                if (quest == null || log.StateOf(quest) != QuestState.Active) continue;
-                if (!log.Report(quest, type, targetId)) continue;
-                log.Refresh(quest, CountOf); // the next step may already be satisfied
+                if (quest == null || Log.StateOf(quest) != QuestState.Active) continue;
+                if (!Log.Report(quest, type, targetId)) continue;
+                Log.Refresh(quest, CountOf); // the next step may already be satisfied
                 Notify(quest);
             }
         }
@@ -72,35 +82,34 @@ namespace Greenhaven.Quests
         {
             foreach (QuestDefinition quest in quests)
             {
-                if (quest != null && log.StateOf(quest) == QuestState.Active && log.Refresh(quest, CountOf))
+                if (quest != null && Log.StateOf(quest) == QuestState.Active && Log.Refresh(quest, CountOf))
                     Notify(quest);
             }
         }
 
-        int CountOf(string itemType) => registry != null ? registry.State.CountOf(itemType) : 0;
+        int CountOf(string itemType) => registry != null ? registry.State.CountOf(itemType) : GameProgress.Instance.Items.CountOf(itemType);
 
         void Notify(QuestDefinition quest)
         {
-            if (log.StateOf(quest) == QuestState.Completed) QuestCompleted?.Invoke(quest);
+            if (Log.StateOf(quest) == QuestState.Completed) QuestCompleted?.Invoke(quest);
             else QuestProgressed?.Invoke(quest);
+            GameProgress.Instance.Save();
         }
 
-        /// <summary>The first active quest in priority order, or null.</summary>
         public QuestDefinition TrackedQuest
         {
             get
             {
                 foreach (QuestDefinition quest in quests)
-                    if (quest != null && log.StateOf(quest) == QuestState.Active) return quest;
+                    if (quest != null && Log.StateOf(quest) == QuestState.Active) return quest;
                 return null;
             }
         }
 
-        /// <summary>Tracker text for the quest's current step, e.g. "Find the supply crates (1/3)".</summary>
         public string CurrentObjectiveText(QuestDefinition quest)
         {
-            QuestProgress p = log.Get(quest);
-            if (p == null || p.State != QuestState.Active) return string.Empty;
+            QuestProgress p = Log.Get(quest);
+            if (p == null || p.State != QuestState.Active || p.StepIndex >= quest.StepCount) return string.Empty;
             QuestStep step = quest.GetStep(p.StepIndex);
             return step.RequiredCount > 1 ? $"{step.Description} ({p.Count}/{step.RequiredCount})" : step.Description;
         }
