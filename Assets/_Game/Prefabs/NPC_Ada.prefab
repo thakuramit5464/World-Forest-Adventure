@@ -1,0 +1,206 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!1 &329260730423672197
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 6760704290538898968}
+  - component: {fileID: 1133707020829226912}
+  - component: {fileID: 1493061919294380142}
+  m_Layer: 0
+  m_Name: NPC_Ada
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &6760704290538898968
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 329260730423672197}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: -2.6, y: 0, z: 9.8}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children:
+  - {fileID: 6209341750169229039}
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!136 &1133707020829226912
+CapsuleCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 329260730423672197}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 2
+  m_Radius: 0.35
+  m_Height: 1.7
+  m_Direction: 1
+  m_Center: {x: 0, y: 0.85, z: 0}
+--- !u!114 &1493061919294380142
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 329260730423672197}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2401ebe9e196ba146b9287bf46a68763, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Greenhaven::Greenhaven.Interaction.DialogueInteractable
+  speakerName: Ada
+  promptVerb: Talk to
+  lines:
+  - The bridge creaks when the wind picks up, but it has held for fifty years.
+  - Rowan's spectacles again? That man would lose his own beard.
+  dialogueView: {fileID: 0}
+  interactionPoint: {fileID: 0}
+  faceInteractor: 1
+  talkAnimator: {fileID: 0}
+  questGiver: {fileID: 0}
+  landmarkId: 
+  questManager: {fileID: 0}
+--- !u!1 &9023408854324258811
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 6209341750169229039}
+  m_Layer: 0
+  m_Name: Visual
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &6209341750169229039
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 9023408854324258811}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children:
+  - {fileID: 5165531428133606950}
+  m_Father: {fileID: 6760704290538898968}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1001 &1449336280578026620
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 6209341750169229039}
+    m_Modifications:
+    - target: {fileID: 6031081708692273754, guid: 0bec12b6c33d3fd4080bdb9784daefb5, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6031081708692273754, guid: 0bec12b6c33d3fd4080bdb9784daefb5, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6031081708692273754, guid: 0bec12b6c33d3fd4080bdb9784daefb5, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6031081708692273754, guid: 0bec12b6c33d3fd4080bdb9784daefb5, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 6031081708692273754, guid: 0bec12b6c33d3fd4080bdb9784daefb5, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6031081708692273754, guid: 0bec12b6c33d3fd4080bdb9784daefb5, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6031081708692273754, guid: 0bec12b6c33d3fd4080bdb9784daefb5, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6031081708692273754, guid: 0bec12b6c33d3fd4080bdb9784daefb5, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6031081708692273754, guid: 0bec12b6c33d3fd4080bdb9784daefb5, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6031081708692273754, guid: 0bec12b6c33d3fd4080bdb9784daefb5, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7480685470337799165, guid: 0bec12b6c33d3fd4080bdb9784daefb5, type: 3}
+      propertyPath: m_Controller
+      value: 
+      objectReference: {fileID: 9100000, guid: eae835efe80c57640b8558f02b5a3b60, type: 2}
+    - target: {fileID: 7480685470337799165, guid: 0bec12b6c33d3fd4080bdb9784daefb5, type: 3}
+      propertyPath: m_CullingMode
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 8509304682440840615, guid: 0bec12b6c33d3fd4080bdb9784daefb5, type: 3}
+      propertyPath: m_Name
+      value: Gen_Adventurer2_Ada
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 8509304682440840615, guid: 0bec12b6c33d3fd4080bdb9784daefb5, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 7907061054922339821}
+  m_SourcePrefab: {fileID: 100100000, guid: 0bec12b6c33d3fd4080bdb9784daefb5, type: 3}
+--- !u!4 &5165531428133606950 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 6031081708692273754, guid: 0bec12b6c33d3fd4080bdb9784daefb5, type: 3}
+  m_PrefabInstance: {fileID: 1449336280578026620}
+  m_PrefabAsset: {fileID: 0}
+--- !u!1 &7064472354264725979 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 8509304682440840615, guid: 0bec12b6c33d3fd4080bdb9784daefb5, type: 3}
+  m_PrefabInstance: {fileID: 1449336280578026620}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &7907061054922339821
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7064472354264725979}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d1423d56c471c824ca921fc83268dbba, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Greenhaven::Greenhaven.Core.AnimatorRandomStart
+  speedVariation: 0.1

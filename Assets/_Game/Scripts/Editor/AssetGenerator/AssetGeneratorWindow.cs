@@ -70,6 +70,14 @@ namespace Greenhaven.Editor.AssetGenerator
         [MenuItem("Greenhaven/Build Adventurer v2 (taller, expressive)", priority = 20)]
         static void RigAdventurerV2Menu() => Report("Build Adventurer v2", AdventurerModelRig.Rig(true));
 
+        [MenuItem("Greenhaven/Build Villager Characters", priority = 20)]
+        static void BuildVillagersMenu()
+        {
+            var sb = new System.Text.StringBuilder();
+            foreach (AdventurerModelRig.Variant v in AdventurerModelRig.Villagers) sb.AppendLine(AdventurerModelRig.Rig(true, v).Split('\n')[0]);
+            Report("Build Villager Characters", sb + "Rebuild the village to use them (Create Village Scene).");
+        }
+
         [MenuItem("Greenhaven/Generate Hero", priority = 21)]
         static void GenerateHeroMenu() => Report("Generate Hero", HeroGenerator.Generate(GeneratorPrefs.Settings.Seed));
 

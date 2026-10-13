@@ -31,7 +31,7 @@ namespace Greenhaven.Editor.WorldTools
         public static void AddToVillage(Func<Vector2, float> ground)
         {
             Transform root = Root("World Links");
-            AddGate(root, VillageTrigger, ground, 7f, new Vector3(5f, 3.5f, 2.5f), CloudpeakScene, FromVillage, "to the Whispering Forest (Cloudpeak)");
+            AddGate(root, VillageTrigger, ground, 7f, new Vector3(5f, 3.5f, 2.5f), CloudpeakScene, FromVillage, "To the Whispering Forest");
             AddArrival(root, VillageArrival, ground, 180f, FromCloudpeak, "back from Cloudpeak");
         }
 
@@ -39,7 +39,7 @@ namespace Greenhaven.Editor.WorldTools
         public static void AddToCloudpeak(CloudpeakWorld world, Func<Vector2, float> ground)
         {
             Transform root = Root("World Links");
-            AddGate(root, world.Entrance + new Vector2(0f, -2.8f), ground, 0f, new Vector3(8f, 3.5f, 2.5f), VillageScene, FromCloudpeak, "back to Greenhaven Village");
+            AddGate(root, world.Entrance + new Vector2(0f, -2.8f), ground, 0f, new Vector3(8f, 3.5f, 2.5f), VillageScene, FromCloudpeak, "To Greenhaven Village");
             AddArrival(root, world.Spawn, ground, 0f, FromVillage, "from Greenhaven Village");
         }
 
@@ -63,6 +63,7 @@ namespace Greenhaven.Editor.WorldTools
             var so = new SerializedObject(gate);
             so.FindProperty("targetScene").stringValue = scene;
             so.FindProperty("arrivalId").stringValue = arrival;
+            so.FindProperty("label").stringValue = label;
             so.ApplyModifiedPropertiesWithoutUndo();
         }
 

@@ -652,7 +652,12 @@ namespace Greenhaven.Editor
 
         /// <summary>An NPC (prefab NPC_{speaker}, reused across scenes) with its default lines and any number of quests, in priority order.</summary>
         internal static GameObject BuildNpc(DialogueView dialogue, string speaker, Vector3 position, float yaw, string skin,
-            string idleClip, string talkClip, QuestManager quests, QuestLines[] questSet, params string[] lines)
+            string idleClip, string talkClip, QuestManager quests, QuestLines[] questSet, params string[] lines) =>
+            BuildNpc(dialogue, speaker, position, yaw, skin, idleClip, talkClip, quests, questSet, false, lines);
+
+        /// <summary><paramref name="walker"/>: an idle/walk controller driven by MoveSpeed (add a VillagerWalker to the result).</summary>
+        internal static GameObject BuildNpc(DialogueView dialogue, string speaker, Vector3 position, float yaw, string skin,
+            string idleClip, string talkClip, QuestManager quests, QuestLines[] questSet, bool walker, params string[] lines)
         {
             var npc = new GameObject("NPC_" + speaker);
             npc.transform.SetPositionAndRotation(position, Quaternion.Euler(0f, yaw, 0f));
@@ -663,9 +668,23 @@ namespace Greenhaven.Editor
 
             Transform visual = Group("Visual", npc.transform);
             Animator animator = null;
-            if (GreenhavenArt.CharacterAvailable)
+            RuntimeAnimatorController controller = walker
+                ? GreenhavenArt.WalkerController("NPC_" + speaker, 1.0f)
+                : GreenhavenArt.NpcController("NPC_" + speaker, idleClip, talkClip);
+            GameObject villager = AdventurerModelRig.FindVariantPrefab(speaker);
+            if (villager != null && GreenhavenArt.AnimationLibraryAvailable)
             {
-                animator = GreenhavenArt.BuildCharacter(visual, skin, GreenhavenArt.NpcController("NPC_" + speaker, idleClip, talkClip));
+                // A villager built from the adventurer model (Greenhaven ▸ Build Villager Characters).
+                var model = (GameObject)PrefabUtility.InstantiatePrefab(villager, visual);
+                animator = model.GetComponent<Animator>();
+                animator.runtimeAnimatorController = controller;
+                animator.applyRootMotion = false;
+                animator.cullingMode = AnimatorCullingMode.CullUpdateTransforms;
+                model.AddComponent<AnimatorRandomStart>();
+            }
+            else if (GreenhavenArt.CharacterAvailable)
+            {
+                animator = GreenhavenArt.BuildCharacter(visual, skin, controller);
                 animator.gameObject.AddComponent<AnimatorRandomStart>();
             }
             else
@@ -703,6 +722,7 @@ namespace Greenhaven.Editor
             if (animator != null) SetRef(instance.GetComponent<DialogueInteractable>(), "talkAnimator", animator);
             QuestGiver[] givers = instance.GetComponents<QuestGiver>();
             foreach (QuestGiver g in givers) SetRef(g, "manager", quests);
+            if (givers.Length > 0) WorldTools.LocationSetup.AddQuestTarget(instance, ObjectiveType.TalkTo, speaker.ToLowerInvariant());
             if (givers.Length > 0) SetRef(instance.GetComponent<DialogueInteractable>(), "questGiver", givers[0]);
             return instance;
         }
@@ -788,6 +808,7 @@ namespace Greenhaven.Editor
             // Bobbing objects must not be static-batched.
             foreach (Transform t in root.GetComponentsInChildren<Transform>()) GameObjectUtility.SetStaticEditorFlags(t.gameObject, 0);
 
+            WorldTools.LocationSetup.AddQuestTarget(root, ObjectiveType.Collect, itemType);
             Collectible c = root.AddComponent<Collectible>();
             var so = new SerializedObject(c);
             so.FindProperty("collectibleId").stringValue = id;

@@ -432,6 +432,27 @@ namespace Greenhaven.Editor
             return c;
         }
 
+        /// <summary>Walking villager: idle/walk blend on MoveSpeed, with a talk loop while "Talking".</summary>
+        public static AnimatorController WalkerController(string name, float walkSpeed)
+        {
+            AnimatorController c = NewController(name);
+            c.AddParameter("MoveSpeed", AnimatorControllerParameterType.Float);
+            c.AddParameter("Talking", AnimatorControllerParameterType.Bool);
+            AnimatorStateMachine sm = c.layers[0].stateMachine;
+            AnimatorState locomotion = c.CreateBlendTreeInController("Locomotion", out BlendTree tree, 0);
+            tree.blendParameter = "MoveSpeed";
+            tree.useAutomaticThresholds = false;
+            tree.AddChild(Clip(LibraryPath, "Idle_Loop"), 0f);
+            tree.AddChild(Clip(LibraryPath, "Walk_Loop"), walkSpeed);
+            AnimatorState talk = sm.AddState("Talk");
+            talk.motion = Clip(LibraryPath, "Idle_Talking_Loop");
+            sm.defaultState = locomotion;
+            Transition(locomotion, talk, 0.25f).AddCondition(AnimatorConditionMode.If, 0f, "Talking");
+            Transition(talk, locomotion, 0.25f).AddCondition(AnimatorConditionMode.IfNot, 0f, "Talking");
+            AssetDatabase.SaveAssets();
+            return c;
+        }
+
         static AnimatorController AnimalController(string animal)
         {
             AnimatorController c = NewController("Animal_" + animal);

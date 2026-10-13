@@ -188,3 +188,8 @@ Legend: `[x]` done and verified · `[~]` implemented and compiles, Play-mode/dev
 - [ ] Owner play-through: Mira → crate past the bridge → forest gate → two forest crates → back to Mira → Rowan → Eagle Ledge spectacles → Rowan twice → summit shrine → cairns (forest, edge, arch) → marker → Rowan. Check the tracker text and banners at each step, and that progress survives leaving a scene and restarting Play.
 - [~] Restore the player's position on Continue. — Title screen with Continue (last scene + arrival) / New Game; position within a scene is not saved yet (arrival points only).
 - [ ] Mission 3 reward and a hook for the next chapter (the Lost Trail).
+
+## Map, places and villagers
+- [~] Map screen, location discovery, quest objective pins, villager variants and walkers. Compile and Editor render pending.
+- [ ] Owner: Build Villager Characters, rebuild both scenes, check the map in each (M), discover places on the way to the summit, talk to Tomas and Ada.
+- [ ] More life later: villagers with daily spots, shop keeper behind the counter, children by the well, NPC look-at toward the player.

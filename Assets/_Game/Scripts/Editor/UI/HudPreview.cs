@@ -112,6 +112,9 @@ namespace Greenhaven.Editor.UI
                     overlay.Find("TitlePage").gameObject.SetActive(false);
                     overlay.Find("SettingsPage").gameObject.SetActive(true);
                     Capture(stem + "_settings.png");
+                    overlay.Find("SettingsPage").gameObject.SetActive(false);
+                    overlay.Find("MapPage").gameObject.SetActive(true);
+                    Capture(stem + "_map.png");
                 }
                 return $"Saved {path} (HUD with a prompt, open dialogue, tracker and banner), plus _title and _settings pages.";
             }

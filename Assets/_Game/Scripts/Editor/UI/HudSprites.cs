@@ -28,7 +28,7 @@ namespace Greenhaven.Editor.UI
 
         public sealed class Set
         {
-            public Sprite Circle, Ring, Panel, KeyCap, IconJump, IconInteract, Bar;
+            public Sprite Circle, Ring, Panel, KeyCap, IconJump, IconInteract, Bar, IconMap, IconArrow, Pin;
         }
 
         public static Set Ensure()
@@ -44,7 +44,42 @@ namespace Greenhaven.Editor.UI
                 IconJump = Save("UI_IconJump", 128, IconJump, Vector4.zero),
                 IconInteract = Save("UI_IconInteract", 128, IconInteract, Vector4.zero),
                 Bar = Save("UI_Bar", 64, Bar, new Vector4(28f, 28f, 28f, 28f)),
+                IconMap = Save("UI_IconMap", 128, IconMap, Vector4.zero),
+                IconArrow = Save("UI_IconArrow", 64, IconArrow, Vector4.zero),
+                Pin = Save("UI_Pin", 64, Pin, Vector4.zero),
             };
+        }
+
+        /// <summary>Folded map: a parallelogram with two fold lines cut out.</summary>
+        static float IconMap(float x, float y, Color[] c)
+        {
+            var p = new Vector2(x - 0.5f, y - 0.5f);
+            float body = RoundedRect(new Vector2(p.x - p.y * 0.18f, p.y), new Vector2(0.34f, 0.26f), 0.03f);
+            float folds = Mathf.Min(Mathf.Abs(p.x - p.y * 0.18f + 0.12f), Mathf.Abs(p.x - p.y * 0.18f - 0.12f)) - 0.025f;
+            c[0] = Color.white;
+            return Fill(body * 128f) * (1f - Fill(folds * 128f) * Fill(body * 128f + 4f));
+        }
+
+        /// <summary>Heading arrow (points up = +Y) for the player's map pin.</summary>
+        static float IconArrow(float x, float y, Color[] c)
+        {
+            var p = new Vector2(x - 0.5f, y - 0.5f);
+            // Triangle via half-planes: tip at (0, 0.42), base corners (±0.3, -0.3), with a notch cut from the base.
+            bool inside = p.y <= 0.42f && p.y >= -0.3f && Mathf.Abs(p.x) <= (0.42f - p.y) * 0.42f && !(p.y < -0.12f && Mathf.Abs(p.x) < (-0.12f - p.y) * 1.6f);
+            c[0] = Color.white;
+            return inside ? 1f : 0f;
+        }
+
+        /// <summary>Map pin: a disc with a short point below.</summary>
+        static float Pin(float x, float y, Color[] c)
+        {
+            var p = new Vector2(x - 0.5f, y - 0.5f);
+            float disc = Vector2.Distance(p, new Vector2(0f, 0.12f)) - 0.3f;
+            bool point = p.y < 0.12f && p.y > -0.46f && Mathf.Abs(p.x) < (p.y + 0.46f) * 0.52f;
+            float inner = Vector2.Distance(p, new Vector2(0f, 0.12f)) - 0.12f;
+            c[0] = Color.white;
+            float a = Mathf.Max(Fill(disc * 64f), point ? 1f : 0f);
+            return a * (1f - Fill(inner * 64f) * 0.85f);
         }
 
         /// <summary>White fully rounded bar (9-sliced): slider tracks and fills, tinted by the Image colour.</summary>

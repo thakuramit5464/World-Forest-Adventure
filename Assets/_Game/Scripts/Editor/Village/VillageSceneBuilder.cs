@@ -147,6 +147,8 @@ namespace Greenhaven.Editor.VillageScene
             BuildBoundaries(env);
             BuildHangingSign(props, layout, dialogue);
             BuildVillagers(props, layout, dialogue, quests, registry);
+            BuildWalkers(props, layout, dialogue, quests);
+            BuildLocations(props);
 
             // 6. Vegetation from the existing nature generators.
             BuildVegetation(vegetation, layout, treeDensity);
@@ -158,6 +160,9 @@ namespace Greenhaven.Editor.VillageScene
 
             // Pebbles, plants and a few rocks in the stream (kept off paths and the bridge).
             if (stream != null) log.AppendLine("Stream: " + River.RiverTools.AddBankDetails(stream, settings));
+
+            // Map picture of the finished village (everything placed), for the map screen.
+            WorldTools.MapCapture.Capture("GreenhavenVillage", "Greenhaven Village", new Rect(-WorldHalf, -WorldHalf, WorldHalf + EastEdge, WorldHalf * 2f));
 
             // 8. Validate and save.
             ValidateLayout(layout, doors, player);
@@ -408,6 +413,37 @@ namespace Greenhaven.Editor.VillageScene
             go.transform.SetPositionAndRotation(new Vector3(HousePivot.x, Height(HousePivot.x, HousePivot.z), HousePivot.z), Quaternion.Euler(0f, HouseYaw, 0f));
             go.name = HouseName;
             log.AppendLine($"Courtyard house placed in the east extension at ({HousePivot.x:0}, {HousePivot.z:0}), courtyard facing the square; path from the square along z = {HousePathStart.y}.");
+        }
+
+        /// <summary>Two villagers strolling the roads (south road and the north road to the bridge), each with a greeting.</summary>
+        static void BuildWalkers(Transform parent, VillageLayout layout, DialogueView dialogue, QuestManager quests)
+        {
+            Transform group = Group("Walkers", parent);
+            void Walker(string name, Vector2[] route, params string[] lines)
+            {
+                var points = new Vector3[route.Length];
+                for (int i = 0; i < route.Length; i++) points[i] = OnGround(route[i]);
+                GameObject npc = Phase1SceneBuilder.BuildNpc(dialogue, name, points[0], 0f, "miraSkin", "Idle_Loop", "Idle_Talking_Loop", quests,
+                    new Phase1SceneBuilder.QuestLines[0], true, lines);
+                npc.transform.SetParent(group, true);
+                npc.AddComponent<Greenhaven.World.VillagerWalker>().Configure(points, 1.0f);
+                foreach (Vector2 p in route) layout.AddKeepClear(p, 1f);
+            }
+            Walker("Tomas", new[] { new Vector2(2.8f, -10.2f), new Vector2(0.9f, -16f), new Vector2(0.9f, -24f), new Vector2(0.9f, -30f) },
+                "Fine day for a walk! Mind the cart ruts on the south road.", "If you're heading for the forest, the gate is up past the bridge.");
+            Walker("Ada", new[] { new Vector2(-2.6f, 9.8f), new Vector2(-0.6f, 14.5f), new Vector2(-0.6f, 19.5f), new Vector2(-0.6f, 25f) },
+                "The bridge creaks when the wind picks up, but it has held for fifty years.", "Rowan's spectacles again? That man would lose his own beard.");
+        }
+
+        /// <summary>Named places: announced when first entered and shown on the map.</summary>
+        static void BuildLocations(Transform parent)
+        {
+            Transform group = Group("Locations", parent);
+            WorldTools.LocationSetup.AddLocation(group, "village_square", "Village Square", "The heart of Greenhaven, around the old well.", Greenhaven.World.LocationKind.Village, OnGround(Vector2.zero), 7.5f, alwaysOnMap: true);
+            WorldTools.LocationSetup.AddLocation(group, "village_bridge", "Greenhaven Bridge", "The old bridge over the village stream.", Greenhaven.World.LocationKind.Bridge, OnGround(new Vector2(0f, StreamZ(0f))), 3.5f);
+            WorldTools.LocationSetup.AddLocation(group, "north_gate", "North Gate", "The road out to the Whispering Forest and Cloudpeak.", Greenhaven.World.LocationKind.Gate, OnGround(new Vector2(1.3f, 29f)), 3.5f, alwaysOnMap: true);
+            WorldTools.LocationSetup.AddLocation(group, "courtyard_house", "Courtyard House", "A rural house with a tiled courtyard, at the village's east end.", Greenhaven.World.LocationKind.House, OnGround(new Vector2(HousePivot.x - 6f, HousePivot.z)), 9f);
+            WorldTools.LocationSetup.AddLocation(group, "elders_house", "Elder's House", "Where Rowan keeps his maps and his bench.", Greenhaven.World.LocationKind.House, OnGround(new Vector2(-9f, 7.5f)), 4.5f);
         }
 
         // ───────────────────────────── Gameplay objects ─────────────────────────────

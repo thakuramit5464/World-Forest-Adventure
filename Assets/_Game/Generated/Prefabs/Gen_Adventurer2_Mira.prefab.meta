@@ -1,7 +1,8 @@
 fileFormatVersion: 2
-guid: 22e03ab549b8edd45b88ab105cb7df5d
-folderAsset: yes
-DefaultImporter:
+guid: f421c0f5ec8adc04c8cf0a8d7afa8bf8
+labels:
+- GreenhavenGenerated
+PrefabImporter:
   externalObjects: {}
   userData: 
   assetBundleName: 

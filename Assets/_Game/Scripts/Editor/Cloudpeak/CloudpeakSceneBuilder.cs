@@ -107,6 +107,7 @@ namespace Greenhaven.Editor.Cloudpeak
 
             // 5. Points of interest, summit landmark, signs, feathers.
             BuildPointsOfInterest(poi, dialogue, registry);
+            BuildLocations(poi);
 
             // 6. Mountain rock formations, then vegetation by zone.
             BuildMountainDetails(mountain);
@@ -126,6 +127,10 @@ namespace Greenhaven.Editor.Cloudpeak
             LeafDrift leaves = AmbientMotionSetup.AddLeafDrift();
             AmbienceController ambience = AmbientMotionSetup.AddAmbience();
             AmbientMotionSetup.AddDebugPanel(Object.FindFirstObjectByType<WindManager>(), leaves, ambience, player, visibleOnStart: false);
+
+            // Map picture of the finished region, for the map screen.
+            float mapHalf = world.Settings.HalfSize;
+            WorldTools.MapCapture.Capture("CloudpeakAdventure", "Cloudpeak", new Rect(-mapHalf, -mapHalf, mapHalf * 2f, mapHalf * 2f));
 
             // 8. Validate: data checks, obstacle sweep, a CharacterController walk from the entrance to the summit.
             log.AppendLine(report.ToString());
@@ -560,6 +565,7 @@ namespace Greenhaven.Editor.Cloudpeak
             shrineTalk.FindProperty("landmarkId").stringValue = Greenhaven.Editor.Quests.GreenhavenQuests.ShrineLandmark;
             shrineTalk.FindProperty("questManager").objectReferenceValue = questManager;
             shrineTalk.ApplyModifiedPropertiesWithoutUndo();
+            WorldTools.LocationSetup.AddQuestTarget(shrineGo, ObjectiveType.Inspect, Greenhaven.Editor.Quests.GreenhavenQuests.ShrineLandmark);
             reserved.Add((shrineAt, 1.8f));
 
             // Cairn with a tall flagpole and a banner that swings in the wind (visible from below).
@@ -597,6 +603,20 @@ namespace Greenhaven.Editor.Cloudpeak
             BuildCairnPuzzle(parent, dialogue, summit, c, forestAngle, arrivalAngle);
         }
 
+        /// <summary>Named places along the trail: announced when first reached and shown on the map.</summary>
+        static void BuildLocations(Transform parent)
+        {
+            Transform group = Group("Locations", parent);
+            void Add(string id, string name, string description, Greenhaven.World.LocationKind kind, Vector2 at, float radius, bool always = false) =>
+                WorldTools.LocationSetup.AddLocation(group, id, name, description, kind, world.OnSurface(at), radius, always);
+            Add("forest_gate", "Forest Gate", "The way back to Greenhaven Village.", Greenhaven.World.LocationKind.Gate, world.Entrance, 4f, true);
+            Add("whispering_glade", "Whispering Glade", "A quiet clearing where the leaves never stop talking.", Greenhaven.World.LocationKind.Clearing, world.Glade, 7f);
+            Add("brook_bridge", "Brook Bridge", "A wooden bridge over the Whispering Brook.", Greenhaven.World.LocationKind.Bridge, world.BridgeCentre, 4f);
+            Add("foothill_rest", "Foothill Rest", "Where the climb begins. Catch your breath.", Greenhaven.World.LocationKind.Rest, world.FoothillRest, 5f);
+            Add("eagle_ledge", "Eagle Ledge", "Halfway up: the whole forest spread out below.", Greenhaven.World.LocationKind.Viewpoint, world.Ledge, 5f);
+            Add("cloudpeak_summit", "Cloudpeak Summit", "The top of the world, as far as Greenhaven knows.", Greenhaven.World.LocationKind.Summit, world.Mountain, 6f);
+        }
+
         // ───────────────────────────── The Mountain Clue: cairn puzzle ─────────────────────────────
 
         /// <summary>Three fire cairns around the plateau (forest side, far edge, by the arch) and a trail marker revealed when they are lit in order.</summary>
@@ -626,6 +646,7 @@ namespace Greenhaven.Editor.Cloudpeak
                 reserved.Add((at, 1.2f));
                 cairns[i] = FireCairn(names[i], group, world.OnSurface(at, -0.04f), Rand(0f, 360f), puzzle);
             }
+            WorldTools.LocationSetup.AddQuestTarget(cairns[0].gameObject, ObjectiveType.Inspect, Greenhaven.Editor.Quests.GreenhavenQuests.CairnLandmark);
             // Revealed by the solved puzzle: an old trail marker at the far edge, pointing beyond the summit.
             Vector2 markerAt = c + new Vector2(Mathf.Cos(edgeAngle), Mathf.Sin(edgeAngle)) * (summit.Radius - 0.9f);
             GameObject marker = Place(Prefab(AssetCategory.Signpost, 1), group, world.OnSurface(markerAt, -0.1f), edgeAngle * -Mathf.Rad2Deg + 90f);

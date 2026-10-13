@@ -198,6 +198,7 @@ namespace Greenhaven.Editor.UI
 
         static void BuildMenu(RectTransform safe, PlayerInputReader input)
         {
+            QuestManager questsInScene = Object.FindFirstObjectByType<QuestManager>();
             // Pause button (top-right, always available; the only HUD button mouse players need).
             RectTransform pauseRt = Rect("PauseButton", safe, new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(-70f, -70f), new Vector2(84f, 84f));
             Image pauseBg = pauseRt.gameObject.AddComponent<Image>();
@@ -213,6 +214,18 @@ namespace Greenhaven.Editor.UI
             }
             Button pauseButton = pauseRt.gameObject.AddComponent<Button>();
             pauseButton.targetGraphic = pauseBg;
+
+            // Map button beside it (M on the keyboard, Select on a gamepad).
+            RectTransform mapRt = Rect("MapButton", safe, new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(-172f, -70f), new Vector2(84f, 84f));
+            Image mapBg = mapRt.gameObject.AddComponent<Image>();
+            mapBg.sprite = sprites.Circle;
+            mapBg.color = new Color(0.16f, 0.11f, 0.07f, 0.55f);
+            Image mapIcon = Rect("Icon", mapRt, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(48f, 48f)).gameObject.AddComponent<Image>();
+            mapIcon.sprite = sprites.IconMap;
+            mapIcon.color = HudSprites.Parchment;
+            mapIcon.raycastTarget = false;
+            Button mapButton = mapRt.gameObject.AddComponent<Button>();
+            mapButton.targetGraphic = mapBg;
 
             // Overlay: dims the game and blocks clicks while a page is open.
             RectTransform overlay = Rect("MenuOverlay", safe, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
@@ -242,14 +255,15 @@ namespace Greenhaven.Editor.UI
             title.gameObject.SetActive(false);
 
             // Pause page.
-            RectTransform pause = Rect("PausePage", overlay, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(680f, 470f));
+            RectTransform pause = Rect("PausePage", overlay, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(680f, 580f));
             Panel(pause, 0.97f);
             Text paused = Label("Heading", pause, 56, TextAnchor.UpperCenter, HudSprites.Accent, bold: true);
             paused.text = "Paused";
             paused.rectTransform.offsetMax = new Vector2(0f, -30f);
-            Button resume = MenuButton(pause, "Resume", 50f, HudSprites.Teal, HudSprites.Parchment, out _);
-            Button pauseSettings = MenuButton(pause, "Settings", -50f, HudSprites.Parchment, HudSprites.Ink, out _);
-            Button toTitle = MenuButton(pause, "Title Screen", -150f, HudSprites.Parchment, HudSprites.Ink, out _);
+            Button resume = MenuButton(pause, "Resume", 100f, HudSprites.Teal, HudSprites.Parchment, out _);
+            Button pauseMap = MenuButton(pause, "Map", 0f, HudSprites.Parchment, HudSprites.Ink, out _);
+            Button pauseSettings = MenuButton(pause, "Settings", -100f, HudSprites.Parchment, HudSprites.Ink, out _);
+            Button toTitle = MenuButton(pause, "Title Screen", -200f, HudSprites.Parchment, HudSprites.Ink, out _);
             pause.gameObject.SetActive(false);
 
             // Settings page.
@@ -265,6 +279,91 @@ namespace Greenhaven.Editor.UI
             Slider volume = SliderRow(settings, "Volume", -180f, 0f, 1f, out Text volumeValue);
             Button back = MenuButton(settings, "Back", -270f, HudSprites.Teal, HudSprites.Parchment, out _);
             settings.gameObject.SetActive(false);
+
+            // Map page: the captured scene picture with pins; a side column for the title, objective and legend.
+            RectTransform mapPage = Rect("MapPage", overlay, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(1320f, 900f));
+            Panel(mapPage, 0.97f);
+            RectTransform frame = Rect("Frame", mapPage, new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), new Vector2(440f, 0f), new Vector2(820f, 820f));
+            Image frameImg = frame.gameObject.AddComponent<Image>();
+            frameImg.sprite = sprites.Panel;
+            frameImg.type = Image.Type.Sliced;
+            frameImg.color = HudSprites.WoodLight;
+            frameImg.raycastTarget = false;
+            RectTransform mapImageRt = Rect("Map", frame, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
+            mapImageRt.offsetMin = new Vector2(12f, 12f);
+            mapImageRt.offsetMax = new Vector2(-12f, -12f);
+            Image mapImage = mapImageRt.gameObject.AddComponent<Image>();
+            mapImage.color = Color.white;
+            mapImage.preserveAspect = true;
+            mapImage.raycastTarget = false;
+            RectTransform pins = Rect("Pins", mapImageRt, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
+            // Pin templates (inactive; MapView clones them).
+            RectTransform playerPin = Rect("PlayerPin", pins, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(46f, 46f));
+            Image playerImg = playerPin.gameObject.AddComponent<Image>();
+            playerImg.sprite = sprites.IconArrow;
+            playerImg.color = HudSprites.Accent;
+            playerImg.raycastTarget = false;
+            RectTransform locationPin = Rect("LocationPin", pins, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(34f, 34f));
+            Image locImg = locationPin.gameObject.AddComponent<Image>();
+            locImg.sprite = sprites.Pin;
+            locImg.raycastTarget = false;
+            Text locLabel = Label("Label", locationPin, 24, TextAnchor.UpperCenter, HudSprites.Ink, bold: true);
+            locLabel.rectTransform.anchorMin = locLabel.rectTransform.anchorMax = new Vector2(0.5f, 0f);
+            locLabel.rectTransform.anchoredPosition = new Vector2(0f, -4f);
+            locLabel.rectTransform.sizeDelta = new Vector2(260f, 60f);
+            locLabel.gameObject.AddComponent<Outline>().effectColor = new Color(0.96f, 0.92f, 0.84f, 0.9f);
+            locationPin.gameObject.SetActive(false);
+            RectTransform objectivePin = Rect("ObjectivePin", pins, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(64f, 64f));
+            Image objImg = objectivePin.gameObject.AddComponent<Image>();
+            objImg.sprite = sprites.Ring;
+            objImg.color = HudSprites.Gold;
+            objImg.raycastTarget = false;
+            objectivePin.gameObject.SetActive(false);
+            RectTransform gatePin = Rect("GatePin", pins, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(26f, 26f));
+            Image gateImg = gatePin.gameObject.AddComponent<Image>();
+            gateImg.sprite = sprites.Circle;
+            gateImg.color = HudSprites.Wood;
+            gateImg.raycastTarget = false;
+            Text gateLabel = Label("Label", gatePin, 22, TextAnchor.UpperCenter, HudSprites.Wood, bold: true);
+            gateLabel.rectTransform.anchorMin = gateLabel.rectTransform.anchorMax = new Vector2(0.5f, 0f);
+            gateLabel.rectTransform.anchoredPosition = new Vector2(0f, -2f);
+            gateLabel.rectTransform.sizeDelta = new Vector2(260f, 60f);
+            gateLabel.gameObject.AddComponent<Outline>().effectColor = new Color(0.96f, 0.92f, 0.84f, 0.9f);
+            gatePin.gameObject.SetActive(false);
+
+            Text mapTitle = Label("Title", mapPage, 48, TextAnchor.UpperLeft, HudSprites.Accent, bold: true);
+            mapTitle.rectTransform.anchorMin = new Vector2(0f, 1f);
+            mapTitle.rectTransform.anchorMax = new Vector2(0f, 1f);
+            mapTitle.rectTransform.anchoredPosition = new Vector2(1060f, -70f);
+            mapTitle.rectTransform.sizeDelta = new Vector2(420f, 70f);
+            mapTitle.text = "Map";
+            Text mapHint = Label("Hint", mapPage, 28, TextAnchor.UpperLeft, HudSprites.Ink);
+            mapHint.rectTransform.anchorMin = new Vector2(0f, 1f);
+            mapHint.rectTransform.anchorMax = new Vector2(0f, 1f);
+            mapHint.rectTransform.anchoredPosition = new Vector2(1060f, -220f);
+            mapHint.rectTransform.sizeDelta = new Vector2(400f, 220f);
+            mapHint.text = "Explore to discover new places.";
+            Text legend = Label("Legend", mapPage, 24, TextAnchor.UpperLeft, HudSprites.WoodLight);
+            legend.rectTransform.anchorMin = new Vector2(0f, 1f);
+            legend.rectTransform.anchorMax = new Vector2(0f, 1f);
+            legend.rectTransform.anchoredPosition = new Vector2(1060f, -470f);
+            legend.rectTransform.sizeDelta = new Vector2(400f, 200f);
+            legend.text = "Red arrow: you\nPins: places you have found\nGold ring: current objective\nBrown dot: path to another region";
+            Button mapBack = MenuButton(mapPage, "Back", -360f, HudSprites.Teal, HudSprites.Parchment, out _);
+            mapBack.GetComponent<RectTransform>().anchoredPosition = new Vector2(400f, -360f);
+            MapView mapView = mapPage.gameObject.AddComponent<MapView>();
+            var mapSo = new SerializedObject(mapView);
+            mapSo.FindProperty("mapImage").objectReferenceValue = mapImage;
+            mapSo.FindProperty("pinLayer").objectReferenceValue = pins;
+            mapSo.FindProperty("titleText").objectReferenceValue = mapTitle;
+            mapSo.FindProperty("hintText").objectReferenceValue = mapHint;
+            mapSo.FindProperty("playerPin").objectReferenceValue = playerPin;
+            mapSo.FindProperty("locationTemplate").objectReferenceValue = locationPin;
+            mapSo.FindProperty("objectiveTemplate").objectReferenceValue = objectivePin;
+            mapSo.FindProperty("gateTemplate").objectReferenceValue = gatePin;
+            mapSo.FindProperty("quests").objectReferenceValue = questsInScene;
+            mapSo.ApplyModifiedPropertiesWithoutUndo();
+            mapPage.gameObject.SetActive(false);
 
             GameMenu menu = overlay.gameObject.AddComponent<GameMenu>();
             var so = new SerializedObject(menu);
@@ -291,6 +390,11 @@ namespace Greenhaven.Editor.UI
             so.FindProperty("sensitivityValue").objectReferenceValue = sensitivityValue;
             so.FindProperty("volumeValue").objectReferenceValue = volumeValue;
             so.FindProperty("showTitleOnStart").boolValue = true;
+            so.FindProperty("mapPanel").objectReferenceValue = mapPage.gameObject;
+            so.FindProperty("mapView").objectReferenceValue = mapView;
+            so.FindProperty("mapButton").objectReferenceValue = mapButton;
+            so.FindProperty("pauseMapButton").objectReferenceValue = pauseMap;
+            so.FindProperty("mapBackButton").objectReferenceValue = mapBack;
             so.ApplyModifiedPropertiesWithoutUndo();
         }
 

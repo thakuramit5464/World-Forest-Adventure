@@ -1,6 +1,8 @@
 fileFormatVersion: 2
-guid: f8bd9ee7cde5caf4186ea294b3b525f7
-TextScriptImporter:
+guid: 0bec12b6c33d3fd4080bdb9784daefb5
+labels:
+- GreenhavenGenerated
+PrefabImporter:
   externalObjects: {}
   userData: 
   assetBundleName: 

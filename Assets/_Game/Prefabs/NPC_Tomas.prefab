@@ -1,0 +1,206 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!1 &5004634118266338880
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 3344497619895315653}
+  m_Layer: 0
+  m_Name: Visual
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &3344497619895315653
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5004634118266338880}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children:
+  - {fileID: 6297773905730601112}
+  m_Father: {fileID: 2685260723191146521}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &6230438388603086549
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 2685260723191146521}
+  - component: {fileID: 7944187118220852548}
+  - component: {fileID: 3495790283625259412}
+  m_Layer: 0
+  m_Name: NPC_Tomas
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &2685260723191146521
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6230438388603086549}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 2.8, y: 0, z: -10.2}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children:
+  - {fileID: 3344497619895315653}
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!136 &7944187118220852548
+CapsuleCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6230438388603086549}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 2
+  m_Radius: 0.35
+  m_Height: 1.7
+  m_Direction: 1
+  m_Center: {x: 0, y: 0.85, z: 0}
+--- !u!114 &3495790283625259412
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6230438388603086549}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2401ebe9e196ba146b9287bf46a68763, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Greenhaven::Greenhaven.Interaction.DialogueInteractable
+  speakerName: Tomas
+  promptVerb: Talk to
+  lines:
+  - Fine day for a walk! Mind the cart ruts on the south road.
+  - If you're heading for the forest, the gate is up past the bridge.
+  dialogueView: {fileID: 0}
+  interactionPoint: {fileID: 0}
+  faceInteractor: 1
+  talkAnimator: {fileID: 0}
+  questGiver: {fileID: 0}
+  landmarkId: 
+  questManager: {fileID: 0}
+--- !u!1001 &8979335609832838368
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 3344497619895315653}
+    m_Modifications:
+    - target: {fileID: 3169181916907050104, guid: d74d55e4759cae040a16887f4ff0ded1, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3169181916907050104, guid: d74d55e4759cae040a16887f4ff0ded1, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3169181916907050104, guid: d74d55e4759cae040a16887f4ff0ded1, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3169181916907050104, guid: d74d55e4759cae040a16887f4ff0ded1, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 3169181916907050104, guid: d74d55e4759cae040a16887f4ff0ded1, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3169181916907050104, guid: d74d55e4759cae040a16887f4ff0ded1, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3169181916907050104, guid: d74d55e4759cae040a16887f4ff0ded1, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3169181916907050104, guid: d74d55e4759cae040a16887f4ff0ded1, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3169181916907050104, guid: d74d55e4759cae040a16887f4ff0ded1, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3169181916907050104, guid: d74d55e4759cae040a16887f4ff0ded1, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 6812214371078986964, guid: d74d55e4759cae040a16887f4ff0ded1, type: 3}
+      propertyPath: m_Controller
+      value: 
+      objectReference: {fileID: 9100000, guid: 20ba30f89072b8846802a53445894904, type: 2}
+    - target: {fileID: 6812214371078986964, guid: d74d55e4759cae040a16887f4ff0ded1, type: 3}
+      propertyPath: m_CullingMode
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 8567868408854540541, guid: d74d55e4759cae040a16887f4ff0ded1, type: 3}
+      propertyPath: m_Name
+      value: Gen_Adventurer2_Tomas
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 8567868408854540541, guid: d74d55e4759cae040a16887f4ff0ded1, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 3259165067390626912}
+  m_SourcePrefab: {fileID: 100100000, guid: d74d55e4759cae040a16887f4ff0ded1, type: 3}
+--- !u!1 &754965116437062685 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 8567868408854540541, guid: d74d55e4759cae040a16887f4ff0ded1, type: 3}
+  m_PrefabInstance: {fileID: 8979335609832838368}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &3259165067390626912
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 754965116437062685}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d1423d56c471c824ca921fc83268dbba, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Greenhaven::Greenhaven.Core.AnimatorRandomStart
+  speedVariation: 0.1
+--- !u!4 &6297773905730601112 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 3169181916907050104, guid: d74d55e4759cae040a16887f4ff0ded1, type: 3}
+  m_PrefabInstance: {fileID: 8979335609832838368}
+  m_PrefabAsset: {fileID: 0}

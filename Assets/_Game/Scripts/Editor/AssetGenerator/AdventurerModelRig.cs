@@ -28,6 +28,30 @@ namespace Greenhaven.Editor.AssetGenerator
         public const string AssetName = "Gen_Adventurer";
         /// <summary>v2: taller (+12 %) with natural proportions, eyelids, expressive brows and mouth, and a scarf.</summary>
         public const string AssetNameV2 = "Gen_Adventurer2";
+
+        /// <summary>A villager built from the same model: recoloured by MTL material name, with optional parts.</summary>
+        public sealed class Variant
+        {
+            public string Name;
+            public Dictionary<string, Color> Colours = new Dictionary<string, Color>();
+            public bool Backpack = true, Pouch = true, Scarf = true, Beard;
+            public float HairLength = 1f;
+            public float Height = 1.84f;
+        }
+
+        static Color Rgb(float r, float g, float b) => new Color(r, g, b, 1f);
+
+        /// <summary>The village cast (Greenhaven ▸ Build Villager Characters).</summary>
+        public static readonly Variant[] Villagers =
+        {
+            new Variant { Name = "Mira", Height = 1.74f, Backpack = false, HairLength = 1.25f, Colours = { ["teal"] = Rgb(0.62f, 0.27f, 0.2f), ["trousers"] = Rgb(0.36f, 0.33f, 0.26f), ["scarf"] = Rgb(0.2f, 0.42f, 0.3f), ["hair"] = Rgb(0.25f, 0.14f, 0.08f), ["skin"] = Rgb(0.78f, 0.55f, 0.38f), ["cream"] = Rgb(0.93f, 0.9f, 0.84f) } },
+            new Variant { Name = "Rowan", Height = 1.72f, Backpack = false, Pouch = false, Beard = true, HairLength = 0.75f, Colours = { ["teal"] = Rgb(0.4f, 0.28f, 0.18f), ["trousers"] = Rgb(0.3f, 0.28f, 0.25f), ["scarf"] = Rgb(0.6f, 0.6f, 0.62f), ["hair"] = Rgb(0.75f, 0.74f, 0.7f), ["skin"] = Rgb(0.74f, 0.52f, 0.38f), ["cream"] = Rgb(0.8f, 0.76f, 0.66f) } },
+            new Variant { Name = "Tomas", Height = 1.8f, Backpack = false, Scarf = false, HairLength = 0.9f, Colours = { ["teal"] = Rgb(0.22f, 0.35f, 0.55f), ["trousers"] = Rgb(0.35f, 0.3f, 0.22f), ["hair"] = Rgb(0.5f, 0.3f, 0.15f), ["skin"] = Rgb(0.55f, 0.36f, 0.24f), ["cream"] = Rgb(0.86f, 0.82f, 0.7f) } },
+            new Variant { Name = "Ada", Height = 1.7f, Backpack = false, HairLength = 1.3f, Colours = { ["teal"] = Rgb(0.45f, 0.22f, 0.35f), ["scarf"] = Rgb(0.9f, 0.85f, 0.7f), ["hair"] = Rgb(0.12f, 0.1f, 0.1f), ["trousers"] = Rgb(0.28f, 0.3f, 0.24f), ["skin"] = Rgb(0.66f, 0.45f, 0.3f), ["cream"] = Rgb(0.95f, 0.88f, 0.8f) } },
+        };
+
+        public static string VariantAssetName(string name) => AssetNameV2 + "_" + name;
+        public static GameObject FindVariantPrefab(string name) => AssetDatabase.LoadAssetAtPath<GameObject>(GeneratedAssetStore.PrefabPath(VariantAssetName(name)));
         const float TargetHeight = 1.65f, TargetHeightV2 = 1.84f;
         const string ObjFile = "Greenhaven_Adventurer.obj";
         const string MtlFile = "Greenhaven_Adventurer.mtl";
@@ -70,13 +94,17 @@ namespace Greenhaven.Editor.AssetGenerator
         public static string Rig() => Rig(false);
 
         /// <summary>Builds v1 (the original proportions) or v2 (taller, expressive). v1 is never touched by a v2 build.</summary>
-        public static string Rig(bool v2)
+        public static string Rig(bool v2) => Rig(v2, null);
+
+        /// <summary>Builds the hero (v1 or v2) or, with a <paramref name="variant"/>, a villager from the same model.</summary>
+        public static string Rig(bool v2, Variant variant)
         {
             string folder = SourceFolder();
             if (folder == null)
                 return $"Could not find {ObjFile} and {MtlFile} in {string.Join(" or ", SourceFolders)} (relative to the project folder).";
 
-            string name = v2 ? AssetNameV2 : AssetName;
+            string name = variant != null ? VariantAssetName(variant.Name) : v2 ? AssetNameV2 : AssetName;
+            if (variant != null) v2 = true;
             string meshPath = GeneratedAssetStore.MeshPath(name);
             string prefabPath = GeneratedAssetStore.PrefabPath(name);
             string avatarPath = $"{GeneratedAssetStore.MeshFolder}/{name}_Avatar.asset";
@@ -99,7 +127,7 @@ namespace Greenhaven.Editor.AssetGenerator
             Dictionary<string, Transform> extras;
             try
             {
-                r = BuildInMemory(folder, out palette, out notes, v2, out extras);
+                r = BuildInMemory(folder, out palette, out notes, v2, out extras, variant);
             }
             catch (Exception e)
             {
@@ -162,7 +190,10 @@ namespace Greenhaven.Editor.AssetGenerator
         public static HeroGenerator.Result BuildInMemory(string folder, out Palette palette, out List<string> notes) =>
             BuildInMemory(folder, out palette, out notes, false, out _);
 
-        public static HeroGenerator.Result BuildInMemory(string folder, out Palette palette, out List<string> notes, bool v2, out Dictionary<string, Transform> extras)
+        public static HeroGenerator.Result BuildInMemory(string folder, out Palette palette, out List<string> notes, bool v2, out Dictionary<string, Transform> extras) =>
+            BuildInMemory(folder, out palette, out notes, v2, out extras, null);
+
+        public static HeroGenerator.Result BuildInMemory(string folder, out Palette palette, out List<string> notes, bool v2, out Dictionary<string, Transform> extras, Variant variant)
         {
             notes = new List<string>();
             extras = new Dictionary<string, Transform>();
@@ -183,10 +214,22 @@ namespace Greenhaven.Editor.AssetGenerator
                     else if (m == "trousers") materials[i] = (m, new Color(0.31f, 0.31f, 0.19f, 1f)); // olive trousers
                     else if (m == "darkleather") materials[i] = (m, new Color(0.50f, 0.32f, 0.15f, 1f)); // tan boot soles
                 }
+                if (variant != null)
+                {
+                    foreach (KeyValuePair<string, Color> colour in variant.Colours)
+                    {
+                        int at = materials.FindIndex(m => m.name == colour.Key);
+                        if (at >= 0) materials[at] = (colour.Key, colour.Value);
+                    }
+                    if (!variant.Backpack)
+                        foreach (string part in new[] { "BackpackMain", "BackpackFlap", "Left_BackpackStrap", "Right_BackpackStrap" }) parts.Remove(part);
+                    if (!variant.Pouch) parts.Remove("Pouch");
+                }
             }
 
             // One palette row per MTL colour: darker for undersides, lighter for tops (shade 4 ≈ the MTL colour).
-            palette = new Palette("AdventurerPalette", materials.Select(m => (Tint(m.colour, 0.72f), Tint(m.colour, 1.3f))).ToArray());
+            // Each villager gets its own palette texture and material; sharing one would recolour every character.
+            palette = new Palette(variant != null ? "AdventurerPalette_" + variant.Name : "AdventurerPalette", materials.Select(m => (Tint(m.colour, 0.72f), Tint(m.colour, 1.3f))).ToArray());
 
             // 1. Pose: straighten the arms into a T-pose (model units).
             var joints = new Dictionary<string, Vector3>();
@@ -194,10 +237,18 @@ namespace Greenhaven.Editor.AssetGenerator
 
             // 1b. v2 proportions; M remaps model heights so bones and weights follow the same change.
             Func<float, float> M = v2 ? Reshape(parts, joints) : (y => y);
+            if (variant != null && Mathf.Abs(variant.HairLength - 1f) > 0.01f && parts.ContainsKey("Head"))
+            {
+                // Longer or shorter hair: scale the locks away from the head's centre (model units).
+                Vector3 headC = parts["Head"].Centroid;
+                foreach (Part hairLock in parts.Values.Where(p => p.Name.StartsWith("HairLock")))
+                    foreach (Vector3[] face in hairLock.Faces)
+                        for (int i = 0; i < face.Length; i++) face[i] = headC + (face[i] - headC) * variant.HairLength;
+            }
 
             // 2. Scale to game height (feet already at y ≈ 0).
             float maxY = parts.Values.SelectMany(p => p.Points).Max(v => v.y);
-            float s = (v2 ? TargetHeightV2 : TargetHeight) / maxY;
+            float s = (variant != null ? variant.Height : v2 ? TargetHeightV2 : TargetHeight) / maxY;
             foreach (Part part in parts.Values)
                 for (int f = 0; f < part.Faces.Count; f++)
                     for (int i = 0; i < part.Faces[f].Length; i++) part.Faces[f][i] *= s;
@@ -215,7 +266,7 @@ namespace Greenhaven.Editor.AssetGenerator
                 ["Head"] = new Vector3(0f, headY, 0f),
                 ["LeftEye"] = C("Left_EyeWhite"),
                 ["RightEye"] = C("Right_EyeWhite"),
-                ["Backpack"] = C("BackpackMain"),
+                ["Backpack"] = parts.ContainsKey("BackpackMain") ? C("BackpackMain") : new Vector3(0f, chestY, -0.12f * s),
             };
             foreach (float side in new[] { -1f, 1f })
             {
@@ -300,7 +351,8 @@ namespace Greenhaven.Editor.AssetGenerator
                 }
             }
             if (v2) AddV2Details(mb, parts, palette, materials.FindIndex(m => m.name == "skin"), materials.FindIndex(m => m.name == "scarf"),
-                materials.FindIndex(m => m.name == "cream"), materials.FindIndex(m => m.name == "leather"), scarfShape, world, B);
+                materials.FindIndex(m => m.name == "cream"), materials.FindIndex(m => m.name == "leather"), scarfShape, world, B,
+                variant == null || variant.Scarf, variant != null && variant.Beard, materials.FindIndex(m => m.name == "hair"), rngBeard: new System.Random(7));
             mb.Skin = null;
 
             Mesh mesh = mb.ToMesh(v2 ? AssetNameV2 : AssetName);
@@ -566,8 +618,19 @@ namespace Greenhaven.Editor.AssetGenerator
 
         /// <summary>v2 extras: soft upper eyelids (on the eye bones, so they close with a blink) and the mustard scarf.</summary>
         static void AddV2Details(MeshBuilder mb, Dictionary<string, Part> parts, Palette palette, int skinRow, int scarfRow, int creamRow, int leatherRow,
-            Scarf scarf, Dictionary<string, Vector3> joints, Func<string, int> bone)
+            Scarf scarf, Dictionary<string, Vector3> joints, Func<string, int> bone, bool withScarf = true, bool beard = false, int hairRow = -1, System.Random rngBeard = null)
         {
+            if (beard && hairRow >= 0 && parts.ContainsKey("Head"))
+            {
+                // A short, full beard under the chin, following the head's lower front.
+                Vector3[] head = parts["Head"].Points.ToArray();
+                float minY = head.Min(p => p.y), maxY = head.Max(p => p.y), frontZ = head.Max(p => p.z);
+                Vector3 hc = parts["Head"].Centroid;
+                float width = (head.Max(p => p.x) - head.Min(p => p.x)) * 0.5f;
+                mb.Skin = _ => HeroGenerator.Rigid(bone("Head"));
+                Shapes.Blob(mb, rngBeard ?? new System.Random(7), new Vector3(hc.x, minY + (maxY - minY) * 0.16f, hc.z + (frontZ - hc.z) * 0.55f),
+                    width * 0.95f, new Vector3(1f, 0.55f, 0.75f), 0.08f, 1, n => palette.UV(hairRow, 3 + (n.y > 0.4f ? 1 : 0)));
+            }
             // Rolled-up cream sleeve cuffs at the elbows and leather wristbands (arms point along ±X in the T-pose).
             foreach (string pre in new[] { "Left", "Right" })
             {
@@ -599,6 +662,7 @@ namespace Greenhaven.Editor.AssetGenerator
                     n => palette.UV(skinRow, 2 + (n.y > 0.5f ? 1 : 0)));
             }
 
+            if (!withScarf) return;
             // Scarf loop, drooping a little at the front.
             mb.Skin = _ => HeroGenerator.Rigid(bone("Chest"));
             const int around = 14, sides = 6;

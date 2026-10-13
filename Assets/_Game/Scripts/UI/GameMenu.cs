@@ -26,11 +26,14 @@ namespace Greenhaven.UI
         [SerializeField] Slider sensitivitySlider, volumeSlider;
         [SerializeField] Toggle invertToggle, touchControlsToggle, recentreToggle;
         [SerializeField] Text sensitivityValue, volumeValue;
+        [SerializeField] GameObject mapPanel;
+        [SerializeField] MapView mapView;
+        [SerializeField] Button mapButton, pauseMapButton, mapBackButton;
         [SerializeField, Tooltip("Scene a new game starts in.")] string startScene = "GreenhavenVillage";
         [SerializeField, Tooltip("Show the title screen when this scene starts (first scene of the session only).")] bool showTitleOnStart = true;
         [SerializeField, Min(1f)] float fadeSpeed = 8f;
 
-        enum Page { None, Title, Pause, Settings }
+        enum Page { None, Title, Pause, Settings, Map }
 
         static bool sessionStarted;
         Page page = Page.None, settingsReturn = Page.Pause;
@@ -53,6 +56,9 @@ namespace Greenhaven.UI
             Hook(toTitleButton, () => Show(Page.Title));
             Hook(settingsBackButton, () => Show(settingsReturn));
             Hook(pauseButton, TogglePause);
+            Hook(mapButton, ToggleMap);
+            Hook(pauseMapButton, () => Show(Page.Map));
+            Hook(mapBackButton, () => Show(Page.Pause));
             if (sensitivitySlider != null) sensitivitySlider.onValueChanged.AddListener(v => { GameSettings.LookSensitivity = v; RefreshValues(); });
             if (volumeSlider != null) volumeSlider.onValueChanged.AddListener(v => { GameSettings.MasterVolume = v; RefreshValues(); });
             if (invertToggle != null) invertToggle.onValueChanged.AddListener(v => GameSettings.InvertY = v);
@@ -94,9 +100,11 @@ namespace Greenhaven.UI
             if (pausePressed)
             {
                 if (page == Page.None) Show(Page.Pause);
-                else if (page == Page.Pause) Resume();
+                else if (page == Page.Pause || page == Page.Map) Resume();
                 else if (page == Page.Settings) Show(settingsReturn);
             }
+            bool mapPressed = (keyboard != null && keyboard.mKey.wasPressedThisFrame) || (pad != null && pad.selectButton.wasPressedThisFrame);
+            if (mapPressed) ToggleMap();
             if (overlay != null)
                 overlay.alpha = Mathf.MoveTowards(overlay.alpha, IsOpen ? 1f : 0f, fadeSpeed * Time.unscaledDeltaTime);
             if (newGameArmed && Time.unscaledTime > newGameArmedUntil) DisarmNewGame();
@@ -108,12 +116,20 @@ namespace Greenhaven.UI
             else if (page == Page.Pause) Resume();
         }
 
+        public void ToggleMap()
+        {
+            if (page == Page.None || page == Page.Pause) Show(Page.Map);
+            else if (page == Page.Map) Resume();
+        }
+
         void Show(Page next)
         {
             page = next;
             if (titlePanel != null) titlePanel.SetActive(next == Page.Title);
             if (pausePanel != null) pausePanel.SetActive(next == Page.Pause);
             if (settingsPanel != null) settingsPanel.SetActive(next == Page.Settings);
+            if (mapPanel != null) mapPanel.SetActive(next == Page.Map);
+            if (next == Page.Map && mapView != null) mapView.Open();
             if (overlay != null)
             {
                 overlay.blocksRaycasts = true;
@@ -131,7 +147,7 @@ namespace Greenhaven.UI
             }
             if (next == Page.Settings) LoadWidgets();
             Select(next == Page.Title ? (continueButton != null && continueButton.gameObject.activeSelf ? continueButton : newGameButton)
-                : next == Page.Pause ? resumeButton : settingsBackButton);
+                : next == Page.Pause ? resumeButton : next == Page.Map ? mapBackButton : settingsBackButton);
         }
 
         void OpenSettings(Page returnTo)
@@ -152,6 +168,7 @@ namespace Greenhaven.UI
             if (titlePanel != null) titlePanel.SetActive(false);
             if (pausePanel != null) pausePanel.SetActive(false);
             if (settingsPanel != null) settingsPanel.SetActive(false);
+            if (mapPanel != null) mapPanel.SetActive(false);
             if (overlay != null)
             {
                 overlay.blocksRaycasts = false;

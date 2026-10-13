@@ -15,6 +15,11 @@ namespace Greenhaven.World
         [SerializeField, Tooltip("Scene name to load, e.g. \"CloudpeakAdventure\".")] string targetScene;
         [SerializeField, Tooltip("Arrival point id in the target scene, e.g. \"from_village\".")] string arrivalId;
 
+        [SerializeField, Tooltip("Shown on the map, e.g. \"To the Whispering Forest\".")] string label = "Gate";
+
+        public string Label => label;
+        public string TargetScene => targetScene;
+
         /// <summary>Arrival id requested by the last gate used; read once by the target scene.</summary>
         public static string PendingArrival { get; private set; }
 
