@@ -173,3 +173,8 @@ Legend: `[x]` done and verified · `[~]` implemented and compiles, Play-mode/dev
 - [~] Expressions and secondary motion in HeroSecondaryMotion; capsule and camera refit for taller heroes; AdventurerV2Tests.
 - [ ] Owner: Build Adventurer v2, then rebuild the Character Test / village / Cloudpeak scenes and check walk, run, jump, landing, interaction and the camera on the mountain trail.
 - [ ] Optional later: hand-authored facial blend shapes; finger bones.
+
+## Rural courtyard house
+- [~] Procedural house, test scene with entrance and walk checks, preview, OBJ export, README, HouseTests.
+- [~] Village east extension with the house and a path (village builder). Owner: rebuild the village and play-test (walk into the cream room, up the stairs to the roof).
+- [ ] Owner visual check against the reference sheet; tune proportions or colours if needed.

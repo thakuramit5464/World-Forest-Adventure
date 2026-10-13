@@ -29,6 +29,15 @@ namespace Greenhaven.Editor.VillageScene
         const float SquareRadius = 8.5f;
         const float WorldHalf = 38f;
         const float WallRadius = 35.5f;
+
+        // East extension: a levelled plot beyond the Weaver's Cottage for the rural courtyard house
+        // (Generated/House), courtyard facing the village; hills rise again around the new edge.
+        const float EastEdge = 46f;                                    // new east boundary wall
+        const float AnnexX0 = 20f, AnnexX1 = 42f, AnnexHalfZ = 13f;    // levelled area
+        static readonly Vector3 HousePivot = new Vector3(27f, 0f, 0f);
+        const float HouseYaw = 90f;                                    // the house's courtyard (local −Z) faces west, toward the square
+        const string HouseName = "Courtyard House";
+        static readonly Vector2 HousePathStart = new Vector2(7.6f, -4.5f), HousePathEnd = new Vector2(23.3f, -4.5f);
         const float BridgeHalfWidth = 1.3f;
         static readonly Vector2 SpawnXZ = new Vector2(0f, -29f);
 
@@ -115,6 +124,7 @@ namespace Greenhaven.Editor.VillageScene
             // 3. Plan buildings first: their doors decide where side paths go.
             var doors = PlanBuildings(layout);
             PlanPaths(layout, doors);
+            PlanHouse(layout);
             layout.AddKeepClear(Vector2.zero, SquareRadius + 0.6f);              // square
             layout.AddKeepClear(SpawnXZ, 3f);                                     // spawn
             layout.AddKeepClear(new Vector2(0f, StreamZ(0f)), 3.4f);              // bridge
@@ -124,6 +134,7 @@ namespace Greenhaven.Editor.VillageScene
 
             // 5. Buildings, square, road furniture, gardens, exit, stream blockers, boundaries.
             PlaceBuildings(buildings, layout);
+            PlaceHouse(buildings);
             DialogueView dialogue = BuildGameplay(out GameObject player);
             WorldTools.WorldLinkSetup.AddToVillage(p => Height(p.x, p.y)); // north gate → Cloudpeak, and the arrival back
             BuildSquare(props, layout, dialogue);
@@ -215,6 +226,11 @@ namespace Greenhaven.Editor.VillageScene
             float noise = Mathf.PerlinNoise(x * 0.07f + seedOffset, z * 0.07f + seedOffset);
             float hills = Smooth(24f, 36f, r) * (3.2f + 2.2f * noise);
             if (Mathf.Abs(z) > 16f) hills *= Mathf.Lerp(0.12f, 1f, Smooth(3.5f, 10f, Mathf.Abs(x)));
+            // East extension: flat inside the plot, hills again just beyond its east and side edges.
+            float outside = Mathf.Max(Mathf.Max(AnnexX0 - x, x - AnnexX1), Mathf.Abs(z) - AnnexHalfZ);
+            float level = 1f - Smooth(0f, 4f, outside);
+            float rim = Smooth(1f, 7f, outside) * (3.5f + 2f * noise) * Smooth(26f, 32f, x);
+            hills = Mathf.Max(hills * (1f - level), rim);
             float bed = -0.45f * (1f - Smooth(1f, 2.2f, Mathf.Abs(z - StreamZ(x))));
             return hills + bed;
         }
@@ -231,7 +247,8 @@ namespace Greenhaven.Editor.VillageScene
             var ground = new MeshBuilder();
             const float cell = 2f;
             int cells = Mathf.RoundToInt(WorldHalf * 2f / cell);
-            for (int i = 0; i < cells; i++)
+            int cellsX = Mathf.RoundToInt((WorldHalf + EastEdge + 4f) / cell); // the grid runs further east for the extension
+            for (int i = 0; i < cellsX; i++)
             {
                 for (int j = 0; j < cells; j++)
                 {
@@ -357,6 +374,41 @@ namespace Greenhaven.Editor.VillageScene
             }
         }
 
+        // ───────────────────────────── Courtyard house (east extension) ─────────────────────────────
+
+        static Obb HouseFootprint()
+        {
+            // The prefab's footprint is about x ±9.6, z −3.6…+9.75 (courtyard at −Z); rotate it into place.
+            Vector3 centre = HousePivot + Quaternion.Euler(0f, HouseYaw, 0f) * new Vector3(0f, 0f, 3.075f);
+            return new Obb(new Vector2(centre.x, centre.z), new Vector2(9.9f, 6.9f), HouseYaw);
+        }
+
+        static void PlanHouse(VillageLayout layout)
+        {
+            layout.AddFootprint(HouseFootprint(), HouseName);
+            layout.AddPath(HousePathStart, HousePathEnd, 2.4f);
+            layout.AddKeepClear(HousePathEnd + Vector2.right * 0.5f, 2f);
+        }
+
+        static void PlaceHouse(Transform parent)
+        {
+            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(House.RuralCourtyardHouse.PrefabPath);
+            if (prefab == null)
+            {
+                log.AppendLine(House.RuralCourtyardHouse.Generate());
+                prefab = AssetDatabase.LoadAssetAtPath<GameObject>(House.RuralCourtyardHouse.PrefabPath);
+            }
+            if (prefab == null)
+            {
+                missing.Add("RuralCourtyardHouse");
+                return;
+            }
+            var go = (GameObject)PrefabUtility.InstantiatePrefab(prefab, parent);
+            go.transform.SetPositionAndRotation(new Vector3(HousePivot.x, Height(HousePivot.x, HousePivot.z), HousePivot.z), Quaternion.Euler(0f, HouseYaw, 0f));
+            go.name = HouseName;
+            log.AppendLine($"Courtyard house placed in the east extension at ({HousePivot.x:0}, {HousePivot.z:0}), courtyard facing the square; path from the square along z = {HousePathStart.y}.");
+        }
+
         // ───────────────────────────── Gameplay objects ─────────────────────────────
 
         static DialogueView BuildGameplay(out GameObject player)
@@ -434,7 +486,7 @@ namespace Greenhaven.Editor.VillageScene
             GameObject sign = Place(Prefab(AssetCategory.Signpost, 0), square, OnGround(new Vector2(2.7f, SquareRadius + 1.6f)), 200f);
             if (sign != null)
                 Readable(sign, dialogue, "North: the Whispering Forest — cross the bridge and follow the trail.",
-                    "West: the Baker's Cottage. East: the Weaver's Cottage. South: the road home.");
+                    "West: the Baker's Cottage. East: the Weaver's Cottage, and past it the courtyard house. South: the road home.");
         }
 
         static void BuildRoad(Transform parent, VillageLayout layout, DialogueView dialogue)
@@ -582,12 +634,24 @@ namespace Greenhaven.Editor.VillageScene
             float side = 2f * WallRadius * Mathf.Tan(Mathf.PI / 8f);
             for (int i = 0; i < 8; i++)
             {
+                if (i == 2) continue; // east face: opened into the extension below
                 float a = i * Mathf.PI / 4f;
                 var go = new GameObject($"Wall{i}");
                 go.transform.SetParent(bounds, false);
                 go.transform.SetPositionAndRotation(new Vector3(Mathf.Sin(a) * WallRadius, 4f, Mathf.Cos(a) * WallRadius), Quaternion.Euler(0f, a * Mathf.Rad2Deg, 0f));
                 go.AddComponent<BoxCollider>().size = new Vector3(side + 1f, 14f, 1f);
             }
+            float half = side * 0.5f; // the octagon's east face spans z = ±half at x = WallRadius
+            void Wall(string name, Vector3 centre, Vector3 size)
+            {
+                var go = new GameObject(name);
+                go.transform.SetParent(bounds, false);
+                go.transform.position = centre;
+                go.AddComponent<BoxCollider>().size = size;
+            }
+            Wall("Wall East (extension)", new Vector3(EastEdge, 4f, 0f), new Vector3(1f, 14f, half * 2f + 1f));
+            Wall("Wall North (extension)", new Vector3((WallRadius + EastEdge) * 0.5f, 4f, half), new Vector3(EastEdge - WallRadius + 1f, 14f, 1f));
+            Wall("Wall South (extension)", new Vector3((WallRadius + EastEdge) * 0.5f, 4f, -half), new Vector3(EastEdge - WallRadius + 1f, 14f, 1f));
         }
 
         // ───────────────────────────── Vegetation ─────────────────────────────
@@ -599,7 +663,7 @@ namespace Greenhaven.Editor.VillageScene
             var trees = new List<Vector2>();
             bool Spaced(Vector2 p, float min) => trees.All(t => (t - p).sqrMagnitude >= min * min);
             bool NearStream(Vector2 p, float m) => Mathf.Abs(p.y - StreamZ(p.x)) < 2.4f + m;
-            bool Inside(Vector2 p) => p.magnitude < WallRadius - 1f;
+            bool Inside(Vector2 p) => p.magnitude < WallRadius - 1f || (p.x > 0f && p.x < EastEdge - 1.5f && Mathf.Abs(p.y) < WallRadius * Mathf.Tan(Mathf.PI / 8f) - 1f);
 
             Transform treeGroup = Group("Trees", parent), rockGroup = Group("Rocks", parent);
             Transform bushGroup = Group("Bushes", parent), flowerGroup = Group("Flowers", parent);
@@ -721,6 +785,23 @@ namespace Greenhaven.Editor.VillageScene
                     }
                 }
             }
+
+            Obb houseBox = HouseFootprint();
+            foreach (var f in layout.Footprints.Where(f => f.name != HouseName && (BuildingSlots.Any(b => b.Name == f.name) || f.name.StartsWith("Garden"))))
+                if (f.box.Overlaps(houseBox, 0.5f))
+                {
+                    log.AppendLine($"⚠ The courtyard house plot overlaps {f.name}.");
+                    issues++;
+                }
+            for (float x = HousePivot.x - 3.6f; x <= HousePivot.x + 9.75f; x += 1f)
+                for (float z = HousePivot.z - 9.6f; z <= HousePivot.z + 9.6f; z += 1f)
+                    if (Mathf.Abs(Height(x, z)) > 0.05f)
+                    {
+                        log.AppendLine($"⚠ Ground under the courtyard house is not level at ({x:0}, {z:0}).");
+                        issues++;
+                        x = float.MaxValue;
+                        break;
+                    }
 
             Vector2 spawn = new Vector2(player.transform.position.x, player.transform.position.z);
             if (layout.InFootprint(spawn, 0.6f, out string blocker))
