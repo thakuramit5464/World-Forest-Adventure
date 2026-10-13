@@ -186,8 +186,9 @@ namespace Greenhaven.Environment
             }
             wasActive = true;
             float dt = Time.deltaTime;
-            if (leafSystem != null) UpdateLeaves(dt);
-            if (splashSystem != null) UpdateSplashes(dt);
+            if (rng == null) rng = new System.Random(seed * 977 + 13); // caches are lost after a script reload in Play mode
+            if (leafSystem != null && leaves != null && leafParticles != null) UpdateLeaves(dt);
+            if (splashSystem != null && rockTimers != null) UpdateSplashes(dt);
             if (ambience != null && ambience.clip != null) UpdateAudio(dt);
         }
 

@@ -106,6 +106,8 @@ namespace Greenhaven.Wind
 
         void LateUpdate()
         {
+            if (leaves == null) leaves = GetComponentInChildren<ParticleSystem>();
+            if (leaves == null) return;
             WindManager wind = WindManager.Current;
             bool active = leavesEnabled && wind != null && wind.WindEnabled && wind.Quality != WindQuality.Off;
             if (!active)
@@ -116,6 +118,9 @@ namespace Greenhaven.Wind
             if (!leaves.isPlaying) leaves.Play();
             if (target != null) transform.position = target.position;
 
+            // Module handles are cheap to fetch and survive a script reload in Play mode (cached ones do not).
+            emission = leaves.emission;
+            velocity = leaves.velocityOverLifetime;
             float strength = wind.Strength;
             emission.rateOverTime = (baseEmission + gustEmission * wind.Gust) * (wind.Quality == WindQuality.Low ? 0.5f : 1f);
             Vector3 carry = wind.Direction * (0.6f + strength * 3.5f);

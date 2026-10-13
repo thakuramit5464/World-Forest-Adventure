@@ -178,3 +178,8 @@ Legend: `[x]` done and verified · `[~]` implemented and compiles, Play-mode/dev
 - [~] Procedural house, test scene with entrance and walk checks, preview, OBJ export, README, HouseTests.
 - [~] Village east extension with the house and a path (village builder). Owner: rebuild the village and play-test (walk into the cream room, up the stairs to the roof).
 - [ ] Owner visual check against the reference sheet; tune proportions or colours if needed.
+
+## Controls and HUD polish
+- [~] Themed HUD sprites and builder, floating joystick with run ring, icon buttons with feedback, look inertia, device-aware touch control visibility and key hints, camera auto-recentre and run FOV, dialogue typewriter. Compile and Editor preview pending.
+- [ ] Owner play-test on desktop (keyboard hides touch controls; E prompt; camera recentring feel) and on a phone or the Device Simulator (floating stick, run ring, look flicks).
+- [ ] Settings later: look sensitivity, invert Y, always-show controls, left-handed layout.
