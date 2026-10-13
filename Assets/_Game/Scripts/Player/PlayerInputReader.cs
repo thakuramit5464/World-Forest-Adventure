@@ -1,13 +1,24 @@
 using System;
+using Greenhaven.UI;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
 
 namespace Greenhaven.Player
 {
+    public enum MouseLookMode
+    {
+        /// <summary>Standard desktop third-person: the cursor is locked and hidden while playing; Esc frees it, a click locks it again.</summary>
+        FreeLook,
+        /// <summary>The camera turns only while the right mouse button is held; the cursor stays free.</summary>
+        HoldRightButton,
+    }
+
     /// <summary>
-    /// Single source of player intent. Keyboard/mouse, gamepads and the on-screen
-    /// touch controls (which emulate a virtual gamepad) all feed the same actions,
-    /// so gameplay code never knows which device is in use.
+    /// Single source of player intent. Keyboard/mouse, gamepads and the on-screen touch controls (which
+    /// emulate a virtual gamepad) all feed the same actions, so gameplay code never knows which device is
+    /// in use. Also owns the desktop cursor: locked for free mouse look, released with Esc or when another
+    /// device takes over.
     /// </summary>
     public sealed class PlayerInputReader : MonoBehaviour
     {
@@ -16,10 +27,12 @@ namespace Greenhaven.Player
         float stickRunThreshold = 0.9f;
 
         [Header("Look")]
-        [SerializeField, Tooltip("Degrees per pixel of mouse movement while the right mouse button is held.")]
-        float mouseDegreesPerPixel = 0.15f;
+        [SerializeField] MouseLookMode mouseLookMode = MouseLookMode.FreeLook;
+        [SerializeField, Tooltip("Degrees per pixel of mouse movement.")]
+        float mouseDegreesPerPixel = 0.12f;
         [SerializeField, Tooltip("Degrees per second at full right-stick deflection.")]
         float stickDegreesPerSecond = 160f;
+        [SerializeField, Tooltip("Camera distance change per scroll notch (desktop).")] float zoomPerNotch = 0.6f;
 
         InputAction move;
         InputAction sprint;
@@ -28,9 +41,12 @@ namespace Greenhaven.Player
         InputAction mouseLook;
         InputAction mouseLookHold;
         InputAction stickLook;
+        InputAction zoom;
 
         Vector2 pendingLookDegrees;
         bool jumpQueued;
+        bool cursorReleased;
+        float pendingZoom;
 
         /// <summary>Raised once per interact press (E, gamepad West, on-screen Interact).</summary>
         public event Action InteractPressed;
@@ -48,6 +64,10 @@ namespace Greenhaven.Player
                 return control != null && control.device is Gamepad && Move.magnitude >= stickRunThreshold;
             }
         }
+
+        /// <summary>True while the mouse is steering the camera (cursor locked, or right button held).</summary>
+        public bool MouseLookActive =>
+            Mouse.current != null && (mouseLookMode == MouseLookMode.FreeLook ? Cursor.lockState == CursorLockMode.Locked : mouseLookHold.IsPressed());
 
         void Awake()
         {
@@ -75,6 +95,7 @@ namespace Greenhaven.Player
             mouseLook = new InputAction("MouseLook", InputActionType.Value, "<Mouse>/delta");
             mouseLookHold = new InputAction("MouseLookHold", InputActionType.Button, "<Mouse>/rightButton");
             stickLook = new InputAction("StickLook", InputActionType.Value, "<Gamepad>/rightStick");
+            zoom = new InputAction("Zoom", InputActionType.Value, "<Mouse>/scroll/y");
 
             jump.performed += OnJump;
             interact.performed += OnInteract;
@@ -89,6 +110,7 @@ namespace Greenhaven.Player
             mouseLook.Enable();
             mouseLookHold.Enable();
             stickLook.Enable();
+            zoom.Enable();
         }
 
         void OnDisable()
@@ -100,8 +122,10 @@ namespace Greenhaven.Player
             mouseLook.Disable();
             mouseLookHold.Disable();
             stickLook.Disable();
+            zoom.Disable();
             jumpQueued = false;
             pendingLookDegrees = Vector2.zero;
+            SetCursorLocked(false);
         }
 
         void OnDestroy()
@@ -115,6 +139,36 @@ namespace Greenhaven.Player
             mouseLook.Dispose();
             mouseLookHold.Dispose();
             stickLook.Dispose();
+            zoom.Dispose();
+        }
+
+        void Update()
+        {
+            pendingZoom += zoom.ReadValue<float>() / 120f * zoomPerNotch; // Windows reports 120 per notch
+            UpdateCursor();
+        }
+
+        void UpdateCursor()
+        {
+            ActiveInput.Refresh();
+            Keyboard keyboard = Keyboard.current;
+            Mouse mouse = Mouse.current;
+            if (keyboard != null && keyboard.escapeKey.wasPressedThisFrame) cursorReleased = true;
+            // A click on the world (not on UI) takes the mouse back.
+            if (cursorReleased && mouse != null && mouse.leftButton.wasPressedThisFrame &&
+                !(EventSystem.current != null && EventSystem.current.IsPointerOverGameObject()))
+                cursorReleased = false;
+
+            bool wantLock = mouseLookMode == MouseLookMode.FreeLook && mouse != null && !cursorReleased &&
+                            Application.isFocused && ActiveInput.Current == InputKind.KeyboardMouse;
+            SetCursorLocked(wantLock);
+        }
+
+        static void SetCursorLocked(bool locked)
+        {
+            CursorLockMode wanted = locked ? CursorLockMode.Locked : CursorLockMode.None;
+            if (Cursor.lockState != wanted) Cursor.lockState = wanted;
+            if (Cursor.visible == locked) Cursor.visible = !locked;
         }
 
         void OnJump(InputAction.CallbackContext _) => jumpQueued = true;
@@ -132,20 +186,37 @@ namespace Greenhaven.Player
         /// <summary>Adds look rotation from a touch drag area (degrees: x = yaw, y = pitch).</summary>
         public void AddLookDegrees(Vector2 degrees) => pendingLookDegrees += degrees;
 
+        /// <summary>Camera distance change requested since the last call (positive = zoom out).</summary>
+        public float ConsumeZoom()
+        {
+            float z = -pendingZoom;
+            pendingZoom = 0f;
+            return z;
+        }
+
         /// <summary>
-        /// Returns look rotation (degrees: x = yaw, y = pitch) gathered since the last call.
-        /// Call once per frame from the camera.
+        /// Returns look rotation (degrees: x = yaw, y = pitch) gathered since the last call, and whether the
+        /// mouse provided it (mouse input wants little smoothing; sticks and touch want more). Call once per frame.
         /// </summary>
-        public Vector2 ConsumeLookDegrees(float deltaTime)
+        public Vector2 ConsumeLookDegrees(float deltaTime, out bool fromMouse)
         {
             Vector2 look = pendingLookDegrees;
             pendingLookDegrees = Vector2.zero;
+            fromMouse = false;
 
-            if (mouseLookHold.IsPressed())
-                look += mouseLook.ReadValue<Vector2>() * mouseDegreesPerPixel;
-
+            if (MouseLookActive)
+            {
+                Vector2 mouseDelta = mouseLook.ReadValue<Vector2>() * mouseDegreesPerPixel;
+                if (mouseDelta.sqrMagnitude > 0f)
+                {
+                    look += mouseDelta;
+                    fromMouse = true;
+                }
+            }
             look += stickLook.ReadValue<Vector2>() * (stickDegreesPerSecond * deltaTime);
             return look;
         }
+
+        public Vector2 ConsumeLookDegrees(float deltaTime) => ConsumeLookDegrees(deltaTime, out _);
     }
 }
