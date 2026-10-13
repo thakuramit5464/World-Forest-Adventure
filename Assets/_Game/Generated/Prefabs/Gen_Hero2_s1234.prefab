@@ -576,6 +576,14 @@ MonoBehaviour:
   leftEye: {fileID: 8931671585894362672}
   rightEye: {fileID: 3212927349901310122}
   backpack: {fileID: 3533734034010345074}
+  leftBrow: {fileID: 0}
+  rightBrow: {fileID: 0}
+  mouth: {fileID: 0}
+  browTravel: 0.012
+  restingBrow: 0.2
+  happySeconds: 1.8
+  scarf: []
+  maxScarfDegrees: 28
   minBlinkInterval: 2.5
   maxBlinkInterval: 6
   blinkDuration: 0.14
@@ -589,6 +597,7 @@ MonoBehaviour:
   lookHeight: 1.1
   maxLookAngle: 100
   lookBlendSpeed: 3
+  idleLookAround: 1
 --- !u!1 &3849777539753558759
 GameObject:
   m_ObjectHideFlags: 0

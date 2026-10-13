@@ -67,6 +67,9 @@ namespace Greenhaven.Editor.AssetGenerator
         [MenuItem("Greenhaven/Rig Greenhaven Adventurer Model", priority = 19)]
         static void RigAdventurerMenu() => Report("Rig Greenhaven Adventurer Model", AdventurerModelRig.Rig());
 
+        [MenuItem("Greenhaven/Build Adventurer v2 (taller, expressive)", priority = 20)]
+        static void RigAdventurerV2Menu() => Report("Build Adventurer v2", AdventurerModelRig.Rig(true));
+
         [MenuItem("Greenhaven/Generate Hero", priority = 21)]
         static void GenerateHeroMenu() => Report("Generate Hero", HeroGenerator.Generate(GeneratorPrefs.Settings.Seed));
 

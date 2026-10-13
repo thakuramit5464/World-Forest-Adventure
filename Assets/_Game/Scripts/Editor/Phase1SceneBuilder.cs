@@ -545,6 +545,14 @@ namespace Greenhaven.Editor
                 heroAnimator.runtimeAnimatorController = GreenhavenArt.PlayerController(
                     heroMotor.FindProperty("walkSpeed").floatValue, heroMotor.FindProperty("runSpeed").floatValue);
                 heroAnimator.applyRootMotion = false;
+                // Fit the capsule to the character (the v2 adventurer is about 1.84 m tall).
+                SkinnedMeshRenderer heroMesh = instance.GetComponentInChildren<SkinnedMeshRenderer>();
+                float heroHeight = heroMesh != null && heroMesh.sharedMesh != null ? heroMesh.sharedMesh.bounds.max.y : 1.7f;
+                if (heroHeight > 1.75f)
+                {
+                    cc.height = heroHeight + 0.04f;
+                    cc.center = new Vector3(0f, cc.height * 0.5f, 0f);
+                }
                 player.AddComponent<PlayerAnimator>();
                 SetLayerRecursively(player, IgnoreRaycastLayer);
                 return SaveAndConnectPrefab(player, prefabName);
@@ -831,6 +839,15 @@ namespace Greenhaven.Editor
             ThirdPersonCameraRig rig = camGo.AddComponent<ThirdPersonCameraRig>();
             SetRef(rig, "target", player.transform);
             SetRef(rig, "input", player.GetComponent<PlayerInputReader>());
+            // Frame taller characters: pivot near the shoulders, a little further back.
+            CharacterController body = player.GetComponent<CharacterController>();
+            if (body != null && body.height > 1.85f)
+            {
+                var rigSo = new SerializedObject(rig);
+                rigSo.FindProperty("pivotOffset").vector3Value = new Vector3(0f, body.height * 0.86f, 0f);
+                rigSo.FindProperty("distance").floatValue = 5.5f * body.height / 1.8f;
+                rigSo.ApplyModifiedPropertiesWithoutUndo();
+            }
         }
 
         // ───────────────────────────── HUD ─────────────────────────────

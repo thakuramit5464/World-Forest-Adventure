@@ -167,3 +167,9 @@ Legend: `[x]` done and verified · `[~]` implemented and compiles, Play-mode/dev
 - [ ] Upgrade water in the existing Village and Cloudpeak scenes (Generate Flowing River, or rebuild them).
 - [ ] Android profiling: Standard vs Low water.
 - [ ] Optional CC0 river ambience clip.
+
+## Adventurer v2
+- [~] Gen_Adventurer2: proportions, reference colours, face (eyelids, brows, smile), scarf; v1 kept. In-memory preview compared with v1 (front, three-quarter, side) and tuned (eyelids, scarf loop, trousers).
+- [~] Expressions and secondary motion in HeroSecondaryMotion; capsule and camera refit for taller heroes; AdventurerV2Tests.
+- [ ] Owner: Build Adventurer v2, then rebuild the Character Test / village / Cloudpeak scenes and check walk, run, jump, landing, interaction and the camera on the mountain trail.
+- [ ] Optional later: hand-authored facial blend shapes; finger bones.

@@ -26,7 +26,9 @@ namespace Greenhaven.Editor.AssetGenerator
     public static class AdventurerModelRig
     {
         public const string AssetName = "Gen_Adventurer";
-        const float TargetHeight = 1.65f;
+        /// <summary>v2: taller (+12 %) with natural proportions, eyelids, expressive brows and mouth, and a scarf.</summary>
+        public const string AssetNameV2 = "Gen_Adventurer2";
+        const float TargetHeight = 1.65f, TargetHeightV2 = 1.84f;
         const string ObjFile = "Greenhaven_Adventurer.obj";
         const string MtlFile = "Greenhaven_Adventurer.mtl";
         static readonly string[] SourceFolders = { "ArtSource/Characters/GreenhavenAdventurer", "greenhaven_adventurer_model" };
@@ -46,7 +48,11 @@ namespace Greenhaven.Editor.AssetGenerator
             public Vector3 Centroid => Points.Aggregate(Vector3.zero, (a, p) => a + p) / Mathf.Max(1, Points.Count());
         }
 
-        public static GameObject FindPrefab() => AssetDatabase.LoadAssetAtPath<GameObject>(GeneratedAssetStore.PrefabPath(AssetName));
+        /// <summary>The preferred rigged adventurer: v2 if it has been built, otherwise v1.</summary>
+        public static GameObject FindPrefab() =>
+            AssetDatabase.LoadAssetAtPath<GameObject>(GeneratedAssetStore.PrefabPath(AssetNameV2)) ?? FindPrefabV1();
+
+        public static GameObject FindPrefabV1() => AssetDatabase.LoadAssetAtPath<GameObject>(GeneratedAssetStore.PrefabPath(AssetName));
 
         public static string SourceFolder()
         {
@@ -61,15 +67,19 @@ namespace Greenhaven.Editor.AssetGenerator
 
         // ───────────────────────────── Menu entry ─────────────────────────────
 
-        public static string Rig()
+        public static string Rig() => Rig(false);
+
+        /// <summary>Builds v1 (the original proportions) or v2 (taller, expressive). v1 is never touched by a v2 build.</summary>
+        public static string Rig(bool v2)
         {
             string folder = SourceFolder();
             if (folder == null)
                 return $"Could not find {ObjFile} and {MtlFile} in {string.Join(" or ", SourceFolders)} (relative to the project folder).";
 
-            string meshPath = GeneratedAssetStore.MeshPath(AssetName);
-            string prefabPath = GeneratedAssetStore.PrefabPath(AssetName);
-            string avatarPath = $"{GeneratedAssetStore.MeshFolder}/{AssetName}_Avatar.asset";
+            string name = v2 ? AssetNameV2 : AssetName;
+            string meshPath = GeneratedAssetStore.MeshPath(name);
+            string prefabPath = GeneratedAssetStore.PrefabPath(name);
+            string avatarPath = $"{GeneratedAssetStore.MeshFolder}/{name}_Avatar.asset";
             var existing = new List<string>();
             foreach (string path in new[] { meshPath, prefabPath, avatarPath })
             {
@@ -79,16 +89,17 @@ namespace Greenhaven.Editor.AssetGenerator
                 existing.Add(path);
             }
             if (existing.Count > 0 && !EditorUtility.DisplayDialog("Replace rigged adventurer?",
-                    "The rigged adventurer already exists and will be rebuilt from the OBJ (scenes using it will update).", "Replace", "Cancel"))
+                    $"{name} already exists and will be rebuilt from the OBJ (scenes using it will update).", "Replace", "Cancel"))
                 return "Cancelled. Rigged adventurer unchanged.";
 
             GeneratedAssetStore.EnsureFolders();
             HeroGenerator.Result r;
             List<string> notes;
             Palette palette;
+            Dictionary<string, Transform> extras;
             try
             {
-                r = BuildInMemory(folder, out palette, out notes);
+                r = BuildInMemory(folder, out palette, out notes, v2, out extras);
             }
             catch (Exception e)
             {
@@ -115,6 +126,16 @@ namespace Greenhaven.Editor.AssetGenerator
                 so.FindProperty("leftEye").objectReferenceValue = r.LeftEye;
                 so.FindProperty("rightEye").objectReferenceValue = r.RightEye;
                 so.FindProperty("backpack").objectReferenceValue = r.Backpack;
+                if (v2)
+                {
+                    so.FindProperty("leftBrow").objectReferenceValue = extras["BrowL"];
+                    so.FindProperty("rightBrow").objectReferenceValue = extras["BrowR"];
+                    so.FindProperty("mouth").objectReferenceValue = extras["Mouth"];
+                    SerializedProperty scarf = so.FindProperty("scarf");
+                    scarf.arraySize = 2;
+                    scarf.GetArrayElementAtIndex(0).objectReferenceValue = extras["ScarfTail0"];
+                    scarf.GetArrayElementAtIndex(1).objectReferenceValue = extras["ScarfTail1"];
+                }
                 so.ApplyModifiedPropertiesWithoutUndo();
 
                 GameObject prefab = PrefabUtility.SaveAsPrefabAsset(r.Root, prefabPath, out bool ok);
@@ -138,13 +159,31 @@ namespace Greenhaven.Editor.AssetGenerator
         // ───────────────────────────── Build ─────────────────────────────
 
         /// <summary>Reads, poses, skins and rigs the model in memory (nothing saved).</summary>
-        public static HeroGenerator.Result BuildInMemory(string folder, out Palette palette, out List<string> notes)
+        public static HeroGenerator.Result BuildInMemory(string folder, out Palette palette, out List<string> notes) =>
+            BuildInMemory(folder, out palette, out notes, false, out _);
+
+        public static HeroGenerator.Result BuildInMemory(string folder, out Palette palette, out List<string> notes, bool v2, out Dictionary<string, Transform> extras)
         {
             notes = new List<string>();
+            extras = new Dictionary<string, Transform>();
             List<(string name, Color colour)> materials = ParseMtl(Path.Combine(folder, MtlFile));
             Dictionary<string, Part> parts = ParseObj(Path.Combine(folder, ObjFile), materials.Select(m => m.name).ToList(), notes);
             foreach (string required in RequiredParts)
                 if (!parts.ContainsKey(required)) throw new InvalidDataException($"part '{required}' is missing from the OBJ");
+            if (v2)
+            {
+                foreach (string required in new[] { "Neck", "Smile", "Left_Eyebrow", "Right_Eyebrow" })
+                    if (!parts.ContainsKey(required)) throw new InvalidDataException($"part '{required}' (needed for v2) is missing from the OBJ");
+                materials.Add(("scarf", new Color(0.88f, 0.64f, 0.13f, 1f))); // mustard scarf
+                // Colours from the owner's turnaround sheet (Adventurer Character Turnaround Sheet.png).
+                for (int i = 0; i < materials.Count; i++)
+                {
+                    string m = materials[i].name;
+                    if (m == "teal") materials[i] = (m, new Color(0.16f, 0.36f, 0.23f, 1f));          // forest-green jacket
+                    else if (m == "trousers") materials[i] = (m, new Color(0.31f, 0.31f, 0.19f, 1f)); // olive trousers
+                    else if (m == "darkleather") materials[i] = (m, new Color(0.50f, 0.32f, 0.15f, 1f)); // tan boot soles
+                }
+            }
 
             // One palette row per MTL colour: darker for undersides, lighter for tops (shade 4 ≈ the MTL colour).
             palette = new Palette("AdventurerPalette", materials.Select(m => (Tint(m.colour, 0.72f), Tint(m.colour, 1.3f))).ToArray());
@@ -153,9 +192,12 @@ namespace Greenhaven.Editor.AssetGenerator
             var joints = new Dictionary<string, Vector3>();
             foreach (float side in new[] { -1f, 1f }) StraightenArm(parts, side, joints);
 
+            // 1b. v2 proportions; M remaps model heights so bones and weights follow the same change.
+            Func<float, float> M = v2 ? Reshape(parts, joints) : (y => y);
+
             // 2. Scale to game height (feet already at y ≈ 0).
             float maxY = parts.Values.SelectMany(p => p.Points).Max(v => v.y);
-            float s = TargetHeight / maxY;
+            float s = (v2 ? TargetHeightV2 : TargetHeight) / maxY;
             foreach (Part part in parts.Values)
                 for (int f = 0; f < part.Faces.Count; f++)
                     for (int i = 0; i < part.Faces[f].Length; i++) part.Faces[f][i] *= s;
@@ -163,7 +205,7 @@ namespace Greenhaven.Editor.AssetGenerator
 
             // 3. Skeleton (world positions, identity rotations) from measured parts.
             Vector3 C(string name) => parts[name].Centroid;
-            float hipsY = 0.75f * s, spineY = 0.9f * s, chestY = 1.08f * s, neckY = 1.29f * s, headY = 1.42f * s;
+            float hipsY = M(0.75f) * s, spineY = M(0.9f) * s, chestY = M(1.08f) * s, neckY = M(1.29f) * s, headY = M(1.42f) * s;
             var world = new Dictionary<string, Vector3>
             {
                 ["Hips"] = new Vector3(0f, hipsY, 0f),
@@ -185,10 +227,20 @@ namespace Greenhaven.Editor.AssetGenerator
                 world[pre + "Hand"] = joints[pre + "Hand"];
                 float legX = C(pre + "_Trouser").x;
                 float footX = C(pre + "_Boot").x;
-                world[pre + "UpperLeg"] = new Vector3(legX, 0.7f * s, 0f);
-                world[pre + "LowerLeg"] = new Vector3(legX, 0.45f * s, 0f);
-                world[pre + "Foot"] = new Vector3(footX, 0.12f * s, 0f);
-                world[pre + "Toes"] = new Vector3(footX, 0.04f * s, 0.15f * s);
+                world[pre + "UpperLeg"] = new Vector3(legX, M(0.7f) * s, 0f);
+                world[pre + "LowerLeg"] = new Vector3(legX, M(0.45f) * s, 0f);
+                world[pre + "Foot"] = new Vector3(footX, M(0.12f) * s, 0f);
+                world[pre + "Toes"] = new Vector3(footX, M(0.04f) * s, 0.15f * s);
+            }
+            Scarf scarfShape = default;
+            if (v2)
+            {
+                world["BrowL"] = C("Left_Eyebrow");
+                world["BrowR"] = C("Right_Eyebrow");
+                world["Mouth"] = C("Smile");
+                scarfShape = MeasureScarf(parts);
+                world["ScarfTail0"] = scarfShape.Tail0;
+                world["ScarfTail1"] = scarfShape.Tail1;
             }
 
             string[] order =
@@ -197,6 +249,7 @@ namespace Greenhaven.Editor.AssetGenerator
                 "LeftShoulder", "LeftUpperArm", "LeftLowerArm", "LeftHand", "RightShoulder", "RightUpperArm", "RightLowerArm", "RightHand",
                 "LeftUpperLeg", "LeftLowerLeg", "LeftFoot", "LeftToes", "RightUpperLeg", "RightLowerLeg", "RightFoot", "RightToes", "Backpack",
             };
+            if (v2) order = order.Concat(new[] { "BrowL", "BrowR", "Mouth", "ScarfTail0", "ScarfTail1" }).ToArray();
             var parent = new Dictionary<string, string>
             {
                 ["Hips"] = null, ["Spine"] = "Hips", ["Chest"] = "Spine", ["Neck"] = "Chest", ["Head"] = "Neck",
@@ -205,9 +258,10 @@ namespace Greenhaven.Editor.AssetGenerator
                 ["RightShoulder"] = "Chest", ["RightUpperArm"] = "RightShoulder", ["RightLowerArm"] = "RightUpperArm", ["RightHand"] = "RightLowerArm",
                 ["LeftUpperLeg"] = "Hips", ["LeftLowerLeg"] = "LeftUpperLeg", ["LeftFoot"] = "LeftLowerLeg", ["LeftToes"] = "LeftFoot",
                 ["RightUpperLeg"] = "Hips", ["RightLowerLeg"] = "RightUpperLeg", ["RightFoot"] = "RightLowerLeg", ["RightToes"] = "RightFoot",
+                ["BrowL"] = "Head", ["BrowR"] = "Head", ["Mouth"] = "Head", ["ScarfTail0"] = "Chest", ["ScarfTail1"] = "ScarfTail0",
             };
 
-            var root = new GameObject(AssetName);
+            var root = new GameObject(v2 ? AssetNameV2 : AssetName);
             var armature = new GameObject("Armature").transform;
             armature.SetParent(root.transform, false);
             var byName = new Dictionary<string, Transform>();
@@ -228,7 +282,7 @@ namespace Greenhaven.Editor.AssetGenerator
             var mb = new MeshBuilder();
             foreach (Part part in parts.Values)
             {
-                mb.Skin = WeightsFor(part.Name, s, B, notes);
+                mb.Skin = WeightsFor(part.Name, s, B, notes, M, v2);
                 Vector3 centre = part.Centroid;
                 for (int f = 0; f < part.Faces.Count; f++)
                 {
@@ -237,6 +291,7 @@ namespace Greenhaven.Editor.AssetGenerator
                     Vector3 outward = faceCentre - centre;
                     if (outward.sqrMagnitude < 1e-8f) outward = Vector3.Cross(face[1] - face[0], face[2] - face[0]);
                     int row = part.FaceMaterial[f];
+                    if (v2 && (part.Name.EndsWith("_Glove") || part.Name.EndsWith("_Forearm"))) row = materials.FindIndex(m => m.name == "skin");
                     for (int i = 1; i < face.Length - 1; i++)
                     {
                         Vector3 n = MeshBuilder.OrientedNormal(face[0], face[i], face[i + 1], outward);
@@ -244,9 +299,11 @@ namespace Greenhaven.Editor.AssetGenerator
                     }
                 }
             }
+            if (v2) AddV2Details(mb, parts, palette, materials.FindIndex(m => m.name == "skin"), materials.FindIndex(m => m.name == "scarf"),
+                materials.FindIndex(m => m.name == "cream"), materials.FindIndex(m => m.name == "leather"), scarfShape, world, B);
             mb.Skin = null;
 
-            Mesh mesh = mb.ToMesh(AssetName);
+            Mesh mesh = mb.ToMesh(v2 ? AssetNameV2 : AssetName);
             Matrix4x4 rootMatrix = root.transform.localToWorldMatrix;
             mesh.bindposes = bones.Select(b => b.worldToLocalMatrix * rootMatrix).ToArray();
             mesh.RecalculateBounds();
@@ -260,7 +317,10 @@ namespace Greenhaven.Editor.AssetGenerator
             smr.localBounds = new Bounds(Vector3.zero, new Vector3(2f, 2.4f, 1.6f));
 
             Avatar avatar = AvatarBuilder.BuildHumanAvatar(root, HeroGenerator.Description(root, order));
-            avatar.name = AssetName + "_Avatar";
+            avatar.name = (v2 ? AssetNameV2 : AssetName) + "_Avatar";
+            if (v2)
+                foreach (string extra in new[] { "BrowL", "BrowR", "Mouth", "ScarfTail0", "ScarfTail1" })
+                    extras[extra] = byName[extra];
             var animator = root.AddComponent<Animator>();
             animator.avatar = avatar;
             animator.applyRootMotion = false;
@@ -337,7 +397,7 @@ namespace Greenhaven.Editor.AssetGenerator
         }
 
         /// <summary>Bone weights per named part (positions are final, scaled game coordinates).</summary>
-        static Func<Vector3, BoneWeight> WeightsFor(string part, float s, Func<string, int> bone, List<string> notes)
+        static Func<Vector3, BoneWeight> WeightsFor(string part, float s, Func<string, int> bone, List<string> notes, Func<float, float> M, bool v2)
         {
             string side = part.StartsWith("Left_") ? "Left" : part.StartsWith("Right_") ? "Right" : null;
             string bare = side == null ? part : part.Substring(side.Length + 1);
@@ -345,14 +405,18 @@ namespace Greenhaven.Editor.AssetGenerator
 
             switch (bare)
             {
-                case "Head": case "Ear": case "HairCap": case "Nose": case "Smile": case "Eyebrow":
+                case "Head": case "Ear": case "HairCap": case "Nose":
                     return _ => R("Head");
+                case "Smile":
+                    return _ => R(v2 ? "Mouth" : "Head");
+                case "Eyebrow":
+                    return _ => R(v2 ? (side == "Left" ? "BrowL" : "BrowR") : "Head");
                 case "EyeWhite": case "Iris": case "Pupil":
                     return _ => R(side + "Eye");
                 case "Neck":
-                    return HeroGenerator.Chain(p => p.y, new[] { 1.31f * s, 1.45f * s }, new[] { bone("Chest"), bone("Neck"), bone("Head") }, 0.03f * s);
+                    return HeroGenerator.Chain(p => p.y, new[] { M(1.31f) * s, M(1.45f) * s }, new[] { bone("Chest"), bone("Neck"), bone("Head") }, 0.03f * s);
                 case "TunicBody": case "ShirtFront":
-                    return HeroGenerator.Chain(p => p.y, new[] { 0.86f * s, 1.0f * s }, new[] { bone("Hips"), bone("Spine"), bone("Chest") }, 0.05f * s);
+                    return HeroGenerator.Chain(p => p.y, new[] { M(0.86f) * s, M(1.0f) * s }, new[] { bone("Hips"), bone("Spine"), bone("Chest") }, 0.05f * s);
                 case "Belt": case "Buckle": case "Pouch":
                     return _ => R("Hips");
                 case "BackpackMain": case "BackpackFlap":
@@ -366,19 +430,216 @@ namespace Greenhaven.Editor.AssetGenerator
                 case "Glove":
                     return _ => R(side + "Hand");
                 case "Trouser":
-                    return HeroGenerator.Chain(p => -p.y, new[] { -0.69f * s, -0.45f * s },
+                    return HeroGenerator.Chain(p => -p.y, new[] { -M(0.69f) * s, -M(0.45f) * s },
                         new[] { bone("Hips"), bone(side + "UpperLeg"), bone(side + "LowerLeg") }, 0.04f * s);
                 case "Cuff":
                     return _ => R(side + "LowerLeg");
                 case "Boot": case "BootSole":
                 {
-                    Func<Vector3, BoneWeight> ankle = HeroGenerator.Chain(p => -p.y, new[] { -0.15f * s }, new[] { bone(side + "LowerLeg"), bone(side + "Foot") }, 0.03f * s);
-                    return p => p.z > 0.13f * s && p.y < 0.12f * s ? R(side + "Toes") : ankle(p);
+                    Func<Vector3, BoneWeight> ankle = HeroGenerator.Chain(p => -p.y, new[] { -M(0.15f) * s }, new[] { bone(side + "LowerLeg"), bone(side + "Foot") }, 0.03f * s);
+                    return p => p.z > 0.13f * s && p.y < M(0.12f) * s ? R(side + "Toes") : ankle(p);
                 }
             }
             if (bare.StartsWith("HairLock")) return _ => R("Head");
             notes.Add($"Unrecognised part '{part}' was attached to the chest.");
             return _ => R("Chest");
+        }
+
+        // ───────────────────────────── v2 proportions and details ─────────────────────────────
+
+        /// <summary>
+        /// v2 proportions in model units (after the T-pose): longer, tapered legs; a narrower torso with a defined
+        /// waist (shoulders keep their width); a slimmer, slightly longer neck; slimmer, slightly longer arms.
+        /// Returns the height remapping, so bones and weights follow the same change.
+        /// </summary>
+        static Func<float, float> Reshape(Dictionary<string, Part> parts, Dictionary<string, Vector3> joints)
+        {
+            const float legTop = 0.70f, neckBase = 1.29f, neckTop = 1.37f;
+            const float kLeg = 1.2f, kTorso = 1.04f, kNeck = 1.6f;
+            float a = legTop * kLeg, b = a + (neckBase - legTop) * kTorso, c = b + (neckTop - neckBase) * kNeck;
+            Func<float, float> map = y => y <= legTop ? y * kLeg : y <= neckBase ? a + (y - legTop) * kTorso : y <= neckTop ? b + (y - neckBase) * kNeck : c + (y - neckTop);
+
+            void Each(Part part, Func<Vector3, Vector3> f)
+            {
+                foreach (Vector3[] face in part.Faces)
+                    for (int i = 0; i < face.Length; i++) face[i] = f(face[i]);
+            }
+            Part P(string n) => parts.TryGetValue(n, out Part found) ? found : null;
+
+            foreach (string pre in new[] { "Left", "Right" })
+            {
+                // Arms: 6 % longer from the shoulder, 10 % slimmer around their axis.
+                Vector3 shoulder = joints[pre + "UpperArm"];
+                Vector3 Arm(Vector3 v) => new Vector3(shoulder.x + (v.x - shoulder.x) * 1.06f, shoulder.y + (v.y - shoulder.y) * 0.9f, shoulder.z + (v.z - shoulder.z) * 0.9f);
+                foreach (string n in new[] { "_Sleeve", "_Forearm", "_Glove" })
+                {
+                    Part arm = P(pre + n);
+                    if (arm != null) Each(arm, Arm);
+                }
+                joints[pre + "LowerArm"] = Arm(joints[pre + "LowerArm"]);
+                joints[pre + "Hand"] = Arm(joints[pre + "Hand"]);
+
+                // Legs: taper from the thigh to the calf and ankle.
+                Part trouser = P(pre + "_Trouser");
+                if (trouser != null)
+                {
+                    Vector3 centre = trouser.Centroid;
+                    Each(trouser, v =>
+                    {
+                        float f = v.y >= 0.62f ? 1.04f : v.y >= 0.42f ? Mathf.Lerp(0.95f, 1.04f, (v.y - 0.42f) / 0.2f) : Mathf.Lerp(0.92f, 0.95f, v.y / 0.42f);
+                        return new Vector3(centre.x + (v.x - centre.x) * f, v.y, centre.z + (v.z - centre.z) * f);
+                    });
+                }
+            }
+
+            // Torso: hips, waist, chest, shoulders.
+            float[] ys = { 0.70f, 0.86f, 1.0f, 1.12f, 1.25f };
+            float[] ws = { 0.94f, 0.86f, 0.92f, 0.97f, 1f };
+            float Width(float y)
+            {
+                if (y <= ys[0]) return ws[0];
+                for (int i = 1; i < ys.Length; i++)
+                    if (y <= ys[i]) return Mathf.Lerp(ws[i - 1], ws[i], Mathf.SmoothStep(0f, 1f, (y - ys[i - 1]) / (ys[i] - ys[i - 1])));
+                return ws[ws.Length - 1];
+            }
+            foreach (string n in new[] { "TunicBody", "ShirtFront", "Belt", "Buckle", "Pouch", "Left_BackpackStrap", "Right_BackpackStrap" })
+            {
+                Part torso = P(n);
+                if (torso != null) Each(torso, v => new Vector3(v.x * Width(v.y), v.y, v.z));
+            }
+            foreach (string n in new[] { "Left_Eyebrow", "Right_Eyebrow" })
+            {
+                Part brow = P(n);
+                if (brow == null) continue;
+                Vector3 bc = brow.Centroid;
+                Each(brow, v => new Vector3(bc.x + (v.x - bc.x) * 1.1f, bc.y + 0.01f + (v.y - bc.y) * 1.4f, bc.z + (v.z - bc.z) * 1.15f));
+            }
+            Part smile = P("Smile");
+            if (smile != null)
+            {
+                Vector3 sc = smile.Centroid;
+                Each(smile, v => new Vector3(sc.x + (v.x - sc.x) * 1.25f, sc.y + (v.y - sc.y) * 1.3f, v.z));
+            }
+            Part neck = P("Neck");
+            if (neck != null)
+            {
+                Vector3 nc = neck.Centroid;
+                Each(neck, v => new Vector3(nc.x + (v.x - nc.x) * 0.88f, v.y, nc.z + (v.z - nc.z) * 0.88f));
+            }
+
+            foreach (Part part in parts.Values) Each(part, v => new Vector3(v.x, map(v.y), v.z));
+            foreach (string k in joints.Keys.ToList()) joints[k] = new Vector3(joints[k].x, map(joints[k].y), joints[k].z);
+            return map;
+        }
+
+        struct Scarf
+        {
+            public Vector3 RingCentre, Tail0, Tail1, TailEnd;
+            public float RingRadius;
+        }
+
+        /// <summary>Scarf placement from the final (scaled) neck and tunic: a loop round the neck base and a tail down the chest.</summary>
+        static Scarf MeasureScarf(Dictionary<string, Part> parts)
+        {
+            Vector3[] neck = parts["Neck"].Points.ToArray();
+            Vector3 nc = parts["Neck"].Centroid;
+            float minY = neck.Min(p => p.y), maxY = neck.Max(p => p.y);
+            float radius = neck.Max(p => new Vector2(p.x - nc.x, p.z - nc.z).magnitude);
+            IEnumerable<Vector3> collar = parts["TunicBody"].Points.Where(p => Mathf.Abs(p.x - nc.x) < 0.1f && Mathf.Abs(p.z - nc.z) < 0.12f);
+            float collarTop = collar.Any() ? collar.Max(p => p.y) : minY + (maxY - minY) * 0.22f;
+            float ringY = Mathf.Clamp(collarTop + 0.012f, minY, maxY - 0.02f);
+            IEnumerable<Vector3> atRing = neck.Where(p => Mathf.Abs(p.y - ringY) < 0.03f);
+            if (atRing.Any()) radius = atRing.Max(p => new Vector2(p.x - nc.x, p.z - nc.z).magnitude);
+            float startY = ringY - 0.03f;
+            IEnumerable<Vector3> chest = parts["TunicBody"].Points.Where(p => Mathf.Abs(p.x + 0.05f) < 0.07f && p.y < startY && p.y > startY - 0.3f);
+            float frontZ = chest.Any() ? chest.Max(p => p.z) : nc.z + radius * 1.4f;
+            var tail0 = new Vector3(-0.05f, startY, frontZ + 0.018f);
+            return new Scarf
+            {
+                RingCentre = new Vector3(nc.x, ringY, nc.z),
+                RingRadius = radius + 0.03f,
+                Tail0 = tail0,
+                Tail1 = tail0 + new Vector3(-0.008f, -0.11f, 0.008f),
+                TailEnd = tail0 + new Vector3(-0.016f, -0.22f, 0.014f),
+            };
+        }
+
+        /// <summary>v2 extras: soft upper eyelids (on the eye bones, so they close with a blink) and the mustard scarf.</summary>
+        static void AddV2Details(MeshBuilder mb, Dictionary<string, Part> parts, Palette palette, int skinRow, int scarfRow, int creamRow, int leatherRow,
+            Scarf scarf, Dictionary<string, Vector3> joints, Func<string, int> bone)
+        {
+            // Rolled-up cream sleeve cuffs at the elbows and leather wristbands (arms point along ±X in the T-pose).
+            foreach (string pre in new[] { "Left", "Right" })
+            {
+                float side = pre == "Left" ? -1f : 1f;
+                Vector3 elbow = joints[pre + "LowerArm"], wrist = joints[pre + "Hand"];
+                float Radius(Vector3 at)
+                {
+                    IEnumerable<Vector3> near = parts[pre + "_Forearm"].Points.Concat(parts[pre + "_Sleeve"].Points).Where(p => Mathf.Abs(p.x - at.x) < 0.035f);
+                    return near.Any() ? near.Max(p => new Vector2(p.y - at.y, p.z - at.z).magnitude) : 0.04f;
+                }
+                mb.Skin = _ => HeroGenerator.Rigid(bone(pre + "LowerArm"));
+                float cuff = Radius(elbow) * 1.15f + 0.006f;
+                Shapes.Cylinder(mb, elbow + Vector3.right * side * 0.005f, elbow + Vector3.right * side * 0.06f, cuff, 8,
+                    n => palette.UV(creamRow, 4 + Palette.SlopeShade(n)), true, true);
+                float band = Radius(wrist) * 1.08f + 0.004f;
+                Vector3 bandAt = wrist - Vector3.right * side * 0.035f;
+                Shapes.Cylinder(mb, bandAt - Vector3.right * side * 0.012f, bandAt + Vector3.right * side * 0.012f, band, 8,
+                    n => palette.UV(leatherRow, 4 + Palette.SlopeShade(n)), true, true);
+            }
+
+            foreach (string pre in new[] { "Left", "Right" })
+            {
+                Vector3[] eye = parts[pre + "_EyeWhite"].Points.ToArray();
+                Vector3 min = new Vector3(eye.Min(p => p.x), eye.Min(p => p.y), eye.Min(p => p.z));
+                Vector3 max = new Vector3(eye.Max(p => p.x), eye.Max(p => p.y), eye.Max(p => p.z));
+                Vector3 c = (min + max) * 0.5f, size = max - min;
+                mb.Skin = _ => HeroGenerator.Rigid(bone(pre + "Eye"));
+                Shapes.Box(mb, new Vector3(c.x, c.y + size.y * 0.47f, c.z + size.z * 0.3f), new Vector3(size.x * 1.12f, size.y * 0.2f, Mathf.Max(size.z * 0.7f, 0.008f)),
+                    n => palette.UV(skinRow, 2 + (n.y > 0.5f ? 1 : 0)));
+            }
+
+            // Scarf loop, drooping a little at the front.
+            mb.Skin = _ => HeroGenerator.Rigid(bone("Chest"));
+            const int around = 14, sides = 6;
+            const float tube = 0.03f;
+            Vector3 P(float a, float b)
+            {
+                var dir = new Vector3(Mathf.Cos(a), 0f, Mathf.Sin(a));
+                Vector3 q = scarf.RingCentre + dir * (scarf.RingRadius + tube * Mathf.Cos(b)) + Vector3.up * (tube * Mathf.Sin(b));
+                q.y -= 0.02f * Mathf.Max(0f, Mathf.Sin(a));
+                return q;
+            }
+            for (int i = 0; i < around; i++)
+            {
+                float a0 = i * Mathf.PI * 2f / around, a1 = (i + 1) * Mathf.PI * 2f / around;
+                for (int j = 0; j < sides; j++)
+                {
+                    float b0 = j * Mathf.PI * 2f / sides, b1 = (j + 1) * Mathf.PI * 2f / sides;
+                    Vector3 p00 = P(a0, b0), p10 = P(a1, b0), p01 = P(a0, b1), p11 = P(a1, b1);
+                    float am = (a0 + a1) * 0.5f;
+                    Vector3 outward = (p00 + p11) * 0.5f - (scarf.RingCentre + new Vector3(Mathf.Cos(am), 0f, Mathf.Sin(am)) * scarf.RingRadius);
+                    Vector3 n = MeshBuilder.OrientedNormal(p00, p10, p01, outward);
+                    Vector2 uv = palette.UV(scarfRow, 4 + Palette.SlopeShade(n) + (i % 3 == 0 ? -1 : 0));
+                    mb.Triangle(p00, p10, p01, outward, uv);
+                    mb.Triangle(p01, p10, p11, outward, uv);
+                }
+            }
+
+            // Tail down the chest in two pieces, so it can swing.
+            void Piece(Vector3 from, Vector3 to, float width, string boneName, int shade)
+            {
+                mb.Skin = _ => HeroGenerator.Rigid(bone(boneName));
+                Vector3 mid = (from + to) * 0.5f;
+                Quaternion rot = Quaternion.FromToRotation(Vector3.up, from - to);
+                Shapes.Box(mb, mid, new Vector3(width, Vector3.Distance(from, to) + 0.01f, 0.018f), rot, n => palette.UV(scarfRow, shade + Palette.SlopeShade(n)));
+            }
+            Piece(scarf.Tail0 + Vector3.up * 0.02f, scarf.Tail1, 0.07f, "ScarfTail0", 4);
+            Piece(scarf.Tail1, scarf.TailEnd, 0.075f, "ScarfTail1", 4);
+            Piece(scarf.TailEnd + Vector3.up * 0.012f, scarf.TailEnd - Vector3.up * 0.006f, 0.078f, "ScarfTail1", 2); // darker fringe
+            Vector3 second = new Vector3(0.035f, 0f, 0.006f);
+            Piece(scarf.Tail0 + second + Vector3.up * 0.015f, scarf.Tail1 + second + new Vector3(0.006f, 0.035f, 0.004f), 0.065f, "ScarfTail0", 5);
+            Piece(scarf.Tail1 + second + new Vector3(0.006f, 0.04f, 0.004f), scarf.Tail1 + second + new Vector3(0.006f, 0.022f, 0.004f), 0.068f, "ScarfTail0", 3);
         }
 
         // ───────────────────────────── OBJ / MTL parsing ─────────────────────────────
