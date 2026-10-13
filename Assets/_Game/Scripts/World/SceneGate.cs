@@ -23,6 +23,9 @@ namespace Greenhaven.World
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
         static void ResetStatics() => PendingArrival = null; // Enter Play Mode Options skip the domain reload
 
+        /// <summary>Asks the next scene to place the player at this arrival point (used by Continue).</summary>
+        public static void RequestArrival(string arrivalId) => PendingArrival = arrivalId;
+
         /// <summary>Returns the pending arrival id (if any) and clears it.</summary>
         public static string ConsumeArrival()
         {

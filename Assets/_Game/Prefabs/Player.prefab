@@ -76,8 +76,10 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Greenhaven::Greenhaven.Player.PlayerInputReader
   stickRunThreshold: 0.9
-  mouseDegreesPerPixel: 0.15
+  mouseLookMode: 0
+  mouseDegreesPerPixel: 0.12
   stickDegreesPerSecond: 160
+  zoomPerNotch: 0.6
 --- !u!114 &1264176304598399886
 MonoBehaviour:
   m_ObjectHideFlags: 0

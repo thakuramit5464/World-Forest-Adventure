@@ -214,9 +214,14 @@ namespace Greenhaven.Player
                 }
             }
             look += stickLook.ReadValue<Vector2>() * (stickDegreesPerSecond * deltaTime);
+            look *= GameSettings.LookSensitivity;
+            if (GameSettings.InvertY) look.y = -look.y;
             return look;
         }
 
         public Vector2 ConsumeLookDegrees(float deltaTime) => ConsumeLookDegrees(deltaTime, out _);
+
+        /// <summary>Take the mouse back after a menu closes (free look only).</summary>
+        public void RelockCursor() => cursorReleased = false;
     }
 }

@@ -28,7 +28,7 @@ namespace Greenhaven.Editor.UI
 
         public sealed class Set
         {
-            public Sprite Circle, Ring, Panel, KeyCap, IconJump, IconInteract;
+            public Sprite Circle, Ring, Panel, KeyCap, IconJump, IconInteract, Bar;
         }
 
         public static Set Ensure()
@@ -43,7 +43,15 @@ namespace Greenhaven.Editor.UI
                 KeyCap = Save("UI_KeyCap", 96, KeyCap, new Vector4(30f, 30f, 30f, 30f)),
                 IconJump = Save("UI_IconJump", 128, IconJump, Vector4.zero),
                 IconInteract = Save("UI_IconInteract", 128, IconInteract, Vector4.zero),
+                Bar = Save("UI_Bar", 64, Bar, new Vector4(28f, 28f, 28f, 28f)),
             };
+        }
+
+        /// <summary>White fully rounded bar (9-sliced): slider tracks and fills, tinted by the Image colour.</summary>
+        static float Bar(float x, float y, Color[] c)
+        {
+            c[0] = Color.white;
+            return Fill(RoundedRect(new Vector2(x - 0.5f, y - 0.5f), new Vector2(0.48f, 0.48f), 0.47f) * 64f);
         }
 
         // ───────────────────────────── Drawing (signed distances, anti-aliased) ─────────────────────────────

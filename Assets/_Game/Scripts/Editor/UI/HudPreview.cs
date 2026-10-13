@@ -89,15 +89,31 @@ namespace Greenhaven.Editor.UI
                 canvas.worldCamera = cam;
                 canvas.planeDistance = 10f;
                 foreach (Transform t in hud.GetComponentsInChildren<Transform>(true)) t.gameObject.layer = 5;
-                Canvas.ForceUpdateCanvases();
-                cam.Render();
                 shot = new Texture2D(1920, 1080, TextureFormat.RGB24, false);
-                RenderTexture.active = rt;
-                shot.ReadPixels(new Rect(0, 0, 1920, 1080), 0, 0);
-                shot.Apply();
-                RenderTexture.active = null;
-                File.WriteAllBytes(path, shot.EncodeToPNG());
-                return $"Saved {path} (HUD as it looks with a prompt, open dialogue, tracker and banner).";
+                void Capture(string file)
+                {
+                    Canvas.ForceUpdateCanvases();
+                    cam.Render();
+                    RenderTexture.active = rt;
+                    shot.ReadPixels(new Rect(0, 0, 1920, 1080), 0, 0);
+                    shot.Apply();
+                    RenderTexture.active = null;
+                    File.WriteAllBytes(file, shot.EncodeToPNG());
+                }
+                Capture(path);
+                // Menu pages: title, then settings (same file name with a suffix).
+                Transform overlay = safe.Find("MenuOverlay");
+                if (overlay != null)
+                {
+                    overlay.GetComponent<CanvasGroup>().alpha = 1f;
+                    string stem = path.Substring(0, path.Length - 4);
+                    overlay.Find("TitlePage").gameObject.SetActive(true);
+                    Capture(stem + "_title.png");
+                    overlay.Find("TitlePage").gameObject.SetActive(false);
+                    overlay.Find("SettingsPage").gameObject.SetActive(true);
+                    Capture(stem + "_settings.png");
+                }
+                return $"Saved {path} (HUD with a prompt, open dialogue, tracker and banner), plus _title and _settings pages.";
             }
             finally
             {

@@ -190,7 +190,195 @@ namespace Greenhaven.Editor.UI
             Phase1SceneBuilder.SetRef(dialogue, "continueHint", hint);
             panel.gameObject.SetActive(false);
 
+            BuildMenu(safe, input);
             return dialogue;
+        }
+
+        // ───────────────────────────── Title, pause and settings ─────────────────────────────
+
+        static void BuildMenu(RectTransform safe, PlayerInputReader input)
+        {
+            // Pause button (top-right, always available; the only HUD button mouse players need).
+            RectTransform pauseRt = Rect("PauseButton", safe, new Vector2(1f, 1f), new Vector2(1f, 1f), new Vector2(-70f, -70f), new Vector2(84f, 84f));
+            Image pauseBg = pauseRt.gameObject.AddComponent<Image>();
+            pauseBg.sprite = sprites.Circle;
+            pauseBg.color = new Color(0.16f, 0.11f, 0.07f, 0.55f);
+            foreach (float x in new[] { -9f, 9f })
+            {
+                Image bar = Rect("Bar", pauseRt, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(x, 0f), new Vector2(10f, 30f)).gameObject.AddComponent<Image>();
+                bar.sprite = sprites.Panel;
+                bar.type = Image.Type.Sliced;
+                bar.color = HudSprites.Parchment;
+                bar.raycastTarget = false;
+            }
+            Button pauseButton = pauseRt.gameObject.AddComponent<Button>();
+            pauseButton.targetGraphic = pauseBg;
+
+            // Overlay: dims the game and blocks clicks while a page is open.
+            RectTransform overlay = Rect("MenuOverlay", safe, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
+            Image dim = overlay.gameObject.AddComponent<Image>();
+            dim.color = new Color(0.05f, 0.04f, 0.03f, 0.55f);
+            CanvasGroup overlayGroup = overlay.gameObject.AddComponent<CanvasGroup>();
+            overlayGroup.alpha = 0f;
+            overlayGroup.blocksRaycasts = false;
+            overlayGroup.interactable = false;
+
+            // Title page.
+            RectTransform title = Rect("TitlePage", overlay, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(900f, 640f));
+            Panel(title, 0.97f);
+            Text heading = Label("Heading", title, 74, TextAnchor.UpperCenter, HudSprites.Accent, bold: true);
+            heading.text = "Trails of Greenhaven";
+            heading.rectTransform.offsetMax = new Vector2(0f, -36f);
+            Text tagline = Label("Tagline", title, 30, TextAnchor.UpperCenter, HudSprites.WoodLight);
+            tagline.text = "A storybook adventure in the forests and mountains";
+            tagline.rectTransform.offsetMax = new Vector2(0f, -132f);
+            Button continueButton = MenuButton(title, "Continue", 110f, HudSprites.Teal, HudSprites.Parchment, out _);
+            Button newGame = MenuButton(title, "New Game", 10f, HudSprites.Parchment, HudSprites.Ink, out Text newGameLabel);
+            Button titleSettings = MenuButton(title, "Settings", -90f, HudSprites.Parchment, HudSprites.Ink, out _);
+            Button quit = MenuButton(title, "Quit", -190f, HudSprites.Parchment, HudSprites.Ink, out _);
+            Text version = Label("Version", title, 22, TextAnchor.LowerCenter, HudSprites.WoodLight);
+            version.text = "Prototype — progress saves automatically";
+            version.rectTransform.offsetMin = new Vector2(0f, 20f);
+            title.gameObject.SetActive(false);
+
+            // Pause page.
+            RectTransform pause = Rect("PausePage", overlay, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(680f, 470f));
+            Panel(pause, 0.97f);
+            Text paused = Label("Heading", pause, 56, TextAnchor.UpperCenter, HudSprites.Accent, bold: true);
+            paused.text = "Paused";
+            paused.rectTransform.offsetMax = new Vector2(0f, -30f);
+            Button resume = MenuButton(pause, "Resume", 50f, HudSprites.Teal, HudSprites.Parchment, out _);
+            Button pauseSettings = MenuButton(pause, "Settings", -50f, HudSprites.Parchment, HudSprites.Ink, out _);
+            Button toTitle = MenuButton(pause, "Title Screen", -150f, HudSprites.Parchment, HudSprites.Ink, out _);
+            pause.gameObject.SetActive(false);
+
+            // Settings page.
+            RectTransform settings = Rect("SettingsPage", overlay, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(960f, 660f));
+            Panel(settings, 0.97f);
+            Text settingsHeading = Label("Heading", settings, 52, TextAnchor.UpperCenter, HudSprites.Accent, bold: true);
+            settingsHeading.text = "Settings";
+            settingsHeading.rectTransform.offsetMax = new Vector2(0f, -28f);
+            Slider sensitivity = SliderRow(settings, "Look sensitivity", 160f, 0.3f, 2.5f, out Text sensitivityValue);
+            Toggle invert = ToggleRow(settings, "Invert look up/down", 70f);
+            Toggle recentre = ToggleRow(settings, "Camera follows behind (touch/gamepad)", -10f);
+            Toggle touchControls = ToggleRow(settings, "Always show touch controls", -90f);
+            Slider volume = SliderRow(settings, "Volume", -180f, 0f, 1f, out Text volumeValue);
+            Button back = MenuButton(settings, "Back", -270f, HudSprites.Teal, HudSprites.Parchment, out _);
+            settings.gameObject.SetActive(false);
+
+            GameMenu menu = overlay.gameObject.AddComponent<GameMenu>();
+            var so = new SerializedObject(menu);
+            so.FindProperty("input").objectReferenceValue = input;
+            so.FindProperty("overlay").objectReferenceValue = overlayGroup;
+            so.FindProperty("titlePanel").objectReferenceValue = title.gameObject;
+            so.FindProperty("pausePanel").objectReferenceValue = pause.gameObject;
+            so.FindProperty("settingsPanel").objectReferenceValue = settings.gameObject;
+            so.FindProperty("continueButton").objectReferenceValue = continueButton;
+            so.FindProperty("newGameButton").objectReferenceValue = newGame;
+            so.FindProperty("titleSettingsButton").objectReferenceValue = titleSettings;
+            so.FindProperty("quitButton").objectReferenceValue = quit;
+            so.FindProperty("resumeButton").objectReferenceValue = resume;
+            so.FindProperty("pauseSettingsButton").objectReferenceValue = pauseSettings;
+            so.FindProperty("toTitleButton").objectReferenceValue = toTitle;
+            so.FindProperty("settingsBackButton").objectReferenceValue = back;
+            so.FindProperty("pauseButton").objectReferenceValue = pauseButton;
+            so.FindProperty("newGameLabel").objectReferenceValue = newGameLabel;
+            so.FindProperty("sensitivitySlider").objectReferenceValue = sensitivity;
+            so.FindProperty("volumeSlider").objectReferenceValue = volume;
+            so.FindProperty("invertToggle").objectReferenceValue = invert;
+            so.FindProperty("touchControlsToggle").objectReferenceValue = touchControls;
+            so.FindProperty("recentreToggle").objectReferenceValue = recentre;
+            so.FindProperty("sensitivityValue").objectReferenceValue = sensitivityValue;
+            so.FindProperty("volumeValue").objectReferenceValue = volumeValue;
+            so.FindProperty("showTitleOnStart").boolValue = true;
+            so.ApplyModifiedPropertiesWithoutUndo();
+        }
+
+        static Button MenuButton(RectTransform parent, string label, float y, Color fill, Color textColor, out Text text)
+        {
+            RectTransform rt = Rect(label.Replace(" ", "") + "Button", parent, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), new Vector2(0f, y), new Vector2(440f, 84f));
+            Image img = rt.gameObject.AddComponent<Image>();
+            img.sprite = sprites.Panel;
+            img.type = Image.Type.Sliced;
+            img.color = fill;
+            text = Label("Label", rt, 34, TextAnchor.MiddleCenter, textColor, bold: true);
+            text.text = label;
+            Button button = rt.gameObject.AddComponent<Button>();
+            button.targetGraphic = img;
+            ColorBlock colors = button.colors;
+            colors.highlightedColor = new Color(0.92f, 0.92f, 0.92f);
+            colors.pressedColor = new Color(0.8f, 0.8f, 0.8f);
+            colors.selectedColor = new Color(0.95f, 0.95f, 0.95f);
+            button.colors = colors;
+            return button;
+        }
+
+        static Text RowLabel(RectTransform parent, string label, float y)
+        {
+            Text t = Label(label.Replace(" ", "") + "Label", parent, 30, TextAnchor.MiddleLeft, HudSprites.Ink);
+            t.text = label;
+            t.rectTransform.anchorMin = new Vector2(0f, 0.5f);
+            t.rectTransform.anchorMax = new Vector2(0f, 0.5f);
+            t.rectTransform.anchoredPosition = new Vector2(300f, y);
+            t.rectTransform.sizeDelta = new Vector2(580f, 60f);
+            return t;
+        }
+
+        static Slider SliderRow(RectTransform parent, string label, float y, float min, float max, out Text valueText)
+        {
+            RowLabel(parent, label, y);
+            RectTransform rt = Rect(label.Replace(" ", "") + "Slider", parent, new Vector2(1f, 0.5f), new Vector2(1f, 0.5f), new Vector2(-250f, y), new Vector2(300f, 44f));
+            Image bg = Rect("Background", rt, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero).gameObject.AddComponent<Image>();
+            bg.rectTransform.offsetMin = new Vector2(0f, 14f);
+            bg.rectTransform.offsetMax = new Vector2(0f, -14f);
+            bg.sprite = sprites.Bar;
+            bg.type = Image.Type.Sliced;
+            bg.color = HudSprites.WoodLight;
+            RectTransform fillArea = Rect("Fill Area", rt, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
+            fillArea.offsetMin = new Vector2(10f, 14f);
+            fillArea.offsetMax = new Vector2(-10f, -14f);
+            Image fill = Rect("Fill", fillArea, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero).gameObject.AddComponent<Image>();
+            fill.rectTransform.offsetMin = new Vector2(-10f, 0f);
+            fill.rectTransform.offsetMax = new Vector2(10f, 0f);
+            fill.sprite = sprites.Bar;
+            fill.type = Image.Type.Sliced;
+            fill.color = HudSprites.Teal;
+            RectTransform handleArea = Rect("Handle Slide Area", rt, Vector2.zero, Vector2.one, Vector2.zero, Vector2.zero);
+            handleArea.offsetMin = new Vector2(20f, 0f);
+            handleArea.offsetMax = new Vector2(-20f, 0f);
+            Image handle = Rect("Handle", handleArea, new Vector2(0f, 0.5f), new Vector2(0f, 0.5f), Vector2.zero, new Vector2(44f, 44f)).gameObject.AddComponent<Image>();
+            handle.rectTransform.sizeDelta = new Vector2(44f, 0f); // the Slider stretches its handle to the area height
+            handle.sprite = sprites.Circle;
+            handle.color = HudSprites.Parchment;
+            Slider slider = rt.gameObject.AddComponent<Slider>();
+            slider.fillRect = fill.rectTransform;
+            slider.handleRect = handle.rectTransform;
+            slider.targetGraphic = handle;
+            slider.direction = Slider.Direction.LeftToRight;
+            slider.minValue = min;
+            slider.maxValue = max;
+            valueText = Label("Value", parent, 28, TextAnchor.MiddleRight, HudSprites.Ink, bold: true);
+            valueText.rectTransform.anchorMin = valueText.rectTransform.anchorMax = new Vector2(1f, 0.5f);
+            valueText.rectTransform.anchoredPosition = new Vector2(-440f, y);
+            valueText.rectTransform.sizeDelta = new Vector2(90f, 60f);
+            return slider;
+        }
+
+        static Toggle ToggleRow(RectTransform parent, string label, float y)
+        {
+            RowLabel(parent, label, y);
+            RectTransform rt = Rect(label.Replace(" ", "") + "Toggle", parent, new Vector2(1f, 0.5f), new Vector2(1f, 0.5f), new Vector2(-128f, y), new Vector2(56f, 56f));
+            Image bg = rt.gameObject.AddComponent<Image>();
+            bg.sprite = sprites.KeyCap;
+            bg.type = Image.Type.Sliced;
+            Image check = Rect("Checkmark", rt, new Vector2(0.5f, 0.5f), new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(30f, 30f)).gameObject.AddComponent<Image>();
+            check.sprite = sprites.Circle;
+            check.color = HudSprites.Teal;
+            check.raycastTarget = false;
+            Toggle toggle = rt.gameObject.AddComponent<Toggle>();
+            toggle.targetGraphic = bg;
+            toggle.graphic = check;
+            return toggle;
         }
 
         // ───────────────────────────── Pieces ─────────────────────────────

@@ -94,7 +94,7 @@ namespace Greenhaven.CameraRig
             }
 
             bool handsFreeDevice = ActiveInput.Current != InputKind.KeyboardMouse;
-            if (autoRecentre && handsFreeDevice && motor != null && Time.time - lastLookTime > recentreDelay && motor.IsGrounded && motor.PlanarSpeed > 1f)
+            if (autoRecentre && GameSettings.AutoRecentre && handsFreeDevice && motor != null && Time.time - lastLookTime > recentreDelay && motor.IsGrounded && motor.PlanarSpeed > 1f)
             {
                 // Follow round behind the hero, but not when steering sideways (that would spiral) or walking toward the camera.
                 Vector2 move = input != null ? input.Move : Vector2.zero;

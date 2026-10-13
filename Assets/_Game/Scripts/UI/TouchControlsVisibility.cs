@@ -22,7 +22,7 @@ namespace Greenhaven.UI
         void Update()
         {
             ActiveInput.Refresh();
-            bool show = alwaysShow || ActiveInput.Current == InputKind.Touch || !ActiveInput.HasSeenActivity;
+            bool show = alwaysShow || GameSettings.AlwaysShowTouchControls || ActiveInput.Current == InputKind.Touch || !ActiveInput.HasSeenActivity;
             if (show != Visible)
             {
                 Visible = show;

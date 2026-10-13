@@ -80,7 +80,7 @@ Legend: `[x]` done and verified · `[~]` implemented and compiles, Play-mode/dev
 **Exit criteria:** core progress survives restart and core gameplay needs no network.
 
 ## Phase 7 — Polish and performance
-- [ ] Tune mobile UI for common landscape aspect ratios.
+- [~] Tune mobile UI for common landscape aspect ratios. — Safe area + height-based scaling; menu pages centred. Check 18:9/20:9 in the Device Simulator.
 - [ ] Add basic audio feedback where available.
 - [ ] Profile CPU/GPU frame time on target device.
 - [ ] Optimize textures, shadows, foliage, and draw calls based on evidence.
@@ -182,9 +182,9 @@ Legend: `[x]` done and verified · `[~]` implemented and compiles, Play-mode/dev
 ## Controls and HUD polish
 - [~] Themed HUD sprites and builder, floating joystick with run ring, icon buttons with feedback, look inertia, device-aware touch control visibility and key hints, camera auto-recentre and run FOV, dialogue typewriter. Compile and Editor preview pending.
 - [ ] Owner play-test on desktop (keyboard hides touch controls; E prompt; camera recentring feel) and on a phone or the Device Simulator (floating stick, run ring, look flicks).
-- [ ] Settings later: look sensitivity, invert Y, always-show controls, left-handed layout.
+- [~] Settings: look sensitivity, invert Y, always-show controls, camera auto-recentre, volume (`GameSettings`). Left-handed layout still to do.
 
 ## Core loop (2026-10-13)
 - [ ] Owner play-through: Mira → crate past the bridge → forest gate → two forest crates → back to Mira → Rowan → Eagle Ledge spectacles → Rowan twice → summit shrine → cairns (forest, edge, arch) → marker → Rowan. Check the tracker text and banners at each step, and that progress survives leaving a scene and restarting Play.
-- [ ] Restore the player's position on Continue (saved scene/arrival exist; needs a title screen with Continue / New Game).
+- [~] Restore the player's position on Continue. — Title screen with Continue (last scene + arrival) / New Game; position within a scene is not saved yet (arrival points only).
 - [ ] Mission 3 reward and a hook for the next chapter (the Lost Trail).
